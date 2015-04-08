@@ -1,25 +1,30 @@
 -module(hbq).
 -export([start/0]).
 
+% lc([server,werkzeug,cmem,hbq,dlq]).
 
 start() ->
-  PID = spawn(fun() -> loop([a,b,c]) end),
-  register(hbqNode, PID),
+  {ok, ConfigList} = file:consult("server.cfg"),
+  {ok, HbqName} = werkzeug:get_config_value(hbqname, ConfigList),
+  Datei = list_to_atom("log/HB-DLQ@" ++ atom_to_list(node()) ++ ".log"),
+  PID = spawn(fun() -> loop([a,b,Datei],ConfigList) end),
+  register(HbqName, PID),
   PID.
 
-loop([HBQ, DLQ, Datei]) ->
+loop([HBQ, DLQ, Datei], ConfigList) ->
   receive
     {Server, {request,initHBQ}} ->
-      State = initHBQ(),
+      State = initHBQ(Datei, ConfigList),
       Server ! {reply, ok},
-      loop(State);
+      loop(State,ConfigList);
     {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
       NewHBQ = pushHBQ(HBQ, [NNr,Msg,TSclientout]),
       Server ! {reply, ok},
-      loop([NewHBQ, DLQ, Datei]);
+      loop([NewHBQ, DLQ, Datei],ConfigList);
     {Server, {request,deliverMSG, NNr,ToClient}} ->
       SendNNr = deliverMSG(HBQ, [NNr,ToClient]),
-      Server ! {reply, SendNNr};
+      Server ! {reply, SendNNr},
+      loop([HBQ, DLQ, Datei],ConfigList);
     {Server, {request,dellHBQ}} ->
       HBQDead = dellHBQ(),
       Server ! {reply, HBQDead};
@@ -30,11 +35,11 @@ loop([HBQ, DLQ, Datei]) ->
 % Initialisieren der HBQ
 % HBQ ! {self(), {request,initHBQ}}
 % receive {reply, ok} 
-initHBQ() -> 
-  Datei = list_to_atom("log/HB-DLQ@" ++ atom_to_list(node()) ++ ".log"),
-  HBQ = [[], 2*Size/3, Datei],
+initHBQ(Datei, ConfigList) -> 
+  DLQLimit = werkzeug:get_config_value(dlqlimit, ConfigList),
+  HBQ = [[], 2*DLQLimit/3, Datei],
   werkzeug:logging(Datei, "initialized HBQ\n"),
-  DLQ = dlq:initDLQ(Size, Datei),
+  DLQ = dlq:initDLQ(DLQLimit, Datei),
   [HBQ, DLQ, Datei].
 
 
