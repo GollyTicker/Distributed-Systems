@@ -1,6 +1,6 @@
 
 -module(server).
--import(werkzeug,[logging/2,get_config_value/2]).
+-import(werkzeug,[logging/2,get_config_value/2,to_String/1]).
 -export([start/0]).
 
 % Abweichungen vom Entwurf:
@@ -43,28 +43,33 @@ initServer(ConfigList) ->
   end,
   
   logging(Datei, "initialized Server\n"),
-  [CMEM, HBQservice, ConfigList, Datei]
-  .
+  State = [0,1, CMEM, HBQservice, ConfigList, Datei],
+  State.
 
 
 % loop: State -> Nothing
-loop([Nr,CMEM, HBQ, ConfigList, Datei]) ->
+loop([LoopNr,Nr,CMEM, HBQ, ConfigList, Datei]) ->
+  logging(Datei, io_lib:format("======= ~p =======\n",[LoopNr])),
   receive
     
     {Client, getmessages} ->
       {ClientNr,CMEM2} = cmem:getClientNNr(CMEM,Client),
       HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
-      loop([Nr,CMEM2, HBQ, ConfigList, Datei]);
+      loop([LoopNr+1,Nr,CMEM2, HBQ, ConfigList, Datei]);
     
     {reply,ClientID,SendNNr} ->
       CMEM2 = cmem:updateClient(CMEM,ClientID,SendNNr,Datei),
-      loop([Nr,CMEM2, HBQ, ConfigList, Datei]);
+      loop([LoopNr+1,Nr,CMEM2, HBQ, ConfigList, Datei]);
     
     {dropmessage, [NNr,Msg,TSclientout]} -> undefined;
     
     {Redakteur, getmsdid}  ->
       Redakteur ! {nid, Nr},
-      loop([Nr+1,CMEM, HBQ, ConfigList, Datei])
+      loop([LoopNr+1,Nr+1,CMEM, HBQ, ConfigList, Datei]);
+      
+    Any ->
+      logging(Datei,"Received unknown message: " ++ to_String(Any) ++ "\n"),
+      loop([LoopNr+1,Nr,CMEM, HBQ, ConfigList, Datei])
     
   end
   .
