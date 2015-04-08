@@ -12,13 +12,19 @@ loop([HBQ, DLQ, Datei]) ->
     {Server, {request,initHBQ}} ->
       State = initHBQ(),
       Server ! {reply, ok},
-      loop(State)
+      loop(State);
     {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
-      Server ! pushHBQ(NNr,Msg,TSclientout)
-    {Server, {request,deliverMSG,NNr,ToClient}} ->
-      Server ! deliverMSG(NNr,ToClient)
+      NewHBQ = pushHBQ(HBQ, [NNr,Msg,TSclientout]),
+      Server ! {reply, ok},
+      loop([NewHBQ, DLQ, Datei]);
+    {Server, {request,deliverMSG, NNr,ToClient}} ->
+      SendNNr = deliverMSG(HBQ, [NNr,ToClient]),
+      Server ! {reply, SendNNr};
     {Server, {request,dellHBQ}} ->
-      Server ! dellHBQ()
+      HBQDead = dellHBQ(),
+      Server ! {reply, HBQDead};
+    Any -> 
+      werkzeug:logging(Datei, "Received unknown message: " ++ werkzeug:to_String(Any))
   end.
 
 % Initialisieren der HBQ
@@ -28,20 +34,26 @@ initHBQ() ->
   Datei = list_to_atom("log/HB-DLQ@" ++ atom_to_list(node()) ++ ".log"),
   HBQ = [[], 2*Size/3, Datei],
   werkzeug:logging(Datei, "initialized HBQ\n"),
-  DLQ = initDLQ(Size, Datei)
+  DLQ = dlq:initDLQ(Size, Datei),
   [HBQ, DLQ, Datei].
-
 
 
 % Speichern einer Nachricht in der HBQ
 % HBQ ! {self(), {request,pushHBQ,[NNr,Msg,TSclientout]}}
 % receive {reply, ok} 
-pushHBQ(NNr,Msg,TSclientout) -> undefined.
+pushHBQ(HBQ, Entry) -> 
+  [Queue,Size,Datei] = HBQ, 
+  [NNr,_,_] = Entry,
+  Heads = lists:takewhile(fun([NNr2,_,_]) -> NNr >= NNr2 end, Queue),
+  Tails = lists:dropwhile(fun([NNr2,_,_]) -> NNr >= NNr2 end, Queue),
+  NewQueue = Heads ++ [Entry|Tails],
+  [NewQueue,Size,Datei].
+
 
 % Abfrage einer Nachricht
 % HBQ ! {self(), {request,deliverMSG,NNr,ToClient}}
 % receive {reply, SendNNr}
-deliverMSG(NNr,ToClient) -> undefined.
+deliverMSG(HBQ, [NNr,ToClient]) -> undefined.
 
 % Terminierung der HBQ
 % HBQ ! {self(), {request,dellHBQ}}
