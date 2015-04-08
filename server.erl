@@ -3,20 +3,18 @@
 -import(werkzeug,[logging/2,get_config_value/2]).
 -export([start/0]).
 
-
-%/* Abfragen einer Nachricht */
-% Server ! {self(), getmessages}
-% receive {reply,[NNr,Msg,TSclientout,TShbqin,TSdlqin,TSdlqout],Terminated} 
-
-%/* Senden einer Nachricht */
-% Server ! {dropmessage,[INNr,Msg,TSclientout]},
-
-%/* Abfragen der eindeutigen Nachrichtennummer */
-% Server ! {self(),getmsgid}
-% receive {nid, Number} 
+% Abweichungen vom Entwurf:
+% 1. getClientNNr
+  % als Antwort von getClientNNr kommt nicht nur die Nummer
+  % sondern auch ein neues CMEM. In diesem CMEM sind alte Clients gelöscht.
+% 2. {reply,SendNNr} während einer Client-Abfrage
+  % es wird dort die Adresse des Clients mitgesendet {reply,Client,SendNNr}
+  % da es nicht möglich ist aus der Message den Client, den es betrifft zurückzuschließen.
+  % Das wäre aber möglich, wenn man auf blockierend wartet...
 
 
 % Servername aus der Config holen, server started, registrieren.
+% start: IO PID
 start() ->
   {ok, ConfigList} = file:consult("server.cfg"),
   PID = spawn( fun() -> State = initServer(ConfigList), loop(State) end),
@@ -26,6 +24,7 @@ start() ->
 
 
 % initialisieren des CMEM, HBQ, DLQ, Logging und Erzeugen des Initialzustands
+% initServer: ConfigList -> State
 initServer(ConfigList) -> 
 
   Datei = list_to_atom("log/Server@" ++ atom_to_list(node()) ++ ".log"),
@@ -37,22 +36,36 @@ initServer(ConfigList) ->
   {ok, HBQnode} = get_config_value(hbqnode,ConfigList),
   {ok, HBQname} = get_config_value(hbqname,ConfigList),
   HBQservice = {HBQname,HBQnode},
-  logging(Datei, "Initializing HBQ - Address: " ++ werkzeug:to_String(HBQname)),
+  logging(Datei, "Initializing HBQ - Address: " ++ werkzeug:to_String(HBQservice) ++ "\n"),
   HBQservice ! {self(), {request,initHBQ}},
   receive
     {reply, ok} -> logging(Datei, "Erhielt OK von HBQ\n")
   end,
   
   logging(Datei, "initialized Server\n"),
-  [CMEM, ConfigList, Datei]
+  [CMEM, HBQservice, ConfigList, Datei]
   .
 
 
-loop([CMEM, ConfigList, Datei]) ->
+% loop: State -> Nothing
+loop([Nr,CMEM, HBQ, ConfigList, Datei]) ->
   receive
-    {Client, getmessages} -> undefined;
+    
+    {Client, getmessages} ->
+      {ClientNr,CMEM2} = cmem:getClientNNr(CMEM,Client),
+      HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
+      loop([Nr,CMEM2, HBQ, ConfigList, Datei]);
+    
+    {reply,ClientID,SendNNr} ->
+      CMEM2 = cmem:updateClient(CMEM,ClientID,SendNNr,Datei),
+      loop([Nr,CMEM2, HBQ, ConfigList, Datei]);
+    
     {dropmessage, [NNr,Msg,TSclientout]} -> undefined;
-    {Redakteur, getmsdid}  -> undefined
+    
+    {Redakteur, getmsdid}  ->
+      Redakteur ! {nid, Nr},
+      loop([Nr+1,CMEM, HBQ, ConfigList, Datei])
+    
   end
   .
 

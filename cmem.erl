@@ -62,10 +62,12 @@ refreshCMEM(CMEM) ->
 getClientNNr(CMEM,ClientID) ->
   logging(datei(CMEM), io_lib:format("getClientNNr(~p,~p)\n",[CMEM,ClientID])),
   CMEM2 = refreshCMEM(CMEM),    % löschen alter Clients
-  case getClient(ClientID,CMEM2) of
-    {NNr,_} -> NNr;
-    false -> 1   % ein unbekannter Client erhält die erste Nachricht
-  end.
+  Nr =
+    case getClient(ClientID,CMEM2) of
+      {NNr,_} -> NNr;
+      false -> 1   % ein unbekannter Client erhält die erste Nachricht
+    end,
+  {CMEM2,Nr}.
 
 
 
