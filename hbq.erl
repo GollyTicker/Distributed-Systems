@@ -22,10 +22,10 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
       loop(State,ConfigList);
 
     {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
-      NewHBQ = pushHBQ(HBQ, DLQ, [NNr,Msg,TSclientout]),
+      {NewHBQ, NewDLQ} = pushHBQ(HBQ, DLQ, [NNr,Msg,TSclientout]),
       Server ! {reply, ok},
-      logging(Datei, "HBQ content: " ++ to_String(NewHBQ)),
-      loop([NewHBQ, DLQ, Datei],ConfigList);
+      % logging(Datei, "HBQ content: " ++ to_String(NewHBQ) ++ "\n"),
+      loop([NewHBQ, NewDLQ, Datei],ConfigList);
 
     {Server, {request,deliverMSG, NNr,ToClient}} ->
       SendNNr = deliverMSG([HBQ, DLQ, Datei], [NNr,ToClient]),
@@ -33,11 +33,11 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
       loop([HBQ, DLQ, Datei],ConfigList);
 
     {Server, {request,dellHBQ}} ->
-      HBQDead = dellHBQ(),
+      HBQDead = dellHBQ(ConfigList),
       Server ! {reply, HBQDead};
 
     Any -> 
-      logging(Datei, "Received unknown message: " ++ to_String(Any))
+      logging(Datei, "Received unknown message: " ++ to_String(Any) ++ "\n")
 
   end.
 
@@ -55,27 +55,58 @@ initHBQ(Datei, ConfigList) ->
 % Speichern einer Nachricht in der HBQ
 % HBQ ! {self(), {request,pushHBQ,[NNr,Msg,TSclientout]}}
 % receive {reply, ok} 
-pushHBQ(HBQ, DLQ, Entry) -> 
-  [HQueue,HSize,HDatei] = HBQ,
-  [DQueue,DSize,DDatei] = DLQ,
-  [NNr,_,_] = Entry,
-  Heads = lists:takewhile(fun([NNr2,_,_]) -> NNr >= NNr2 end, HQueue),
-  Tails = lists:dropwhile(fun([NNr2,_,_]) -> NNr >= NNr2 end, HQueue),
-  NewHQueue = Heads ++ [Entry|Tails],
-  
-  Diff = lists:size(DQueue) - DSize,
-  NewDQueue = case Diff >= 0 of
-    true -> pushAll(DQueue, lists:sublist(HQueue, 1, Diff), DDatei);
-    false -> lists:sublist(DQueue, -Diff, lists:size(DQueue))
-  end,
+% pushHBQ: HBQ -> DLQ -> {HBQ,DLQ}
+pushHBQ([HQueue,HSize,HDatei] = HBQ,
+        DLQ,
+        Entry) -> 
+  % 1. in HBQ einfügen
+  NewHQueue = sortedInsert(HQueue,Entry),
+  % 2. expected nr holen
+  ExpNr = expectedNr(DLQ),
+  % 3. Lücke schließen, falls die HBQ zu groß ist
+  DLQ2 = closeGapIfTooBig(HBQ,DLQ,ExpNr),
+  % 4. Korrekt geordnete Elemente von der HBQ in die DLQ weiterleiten.
+  HBQ2 = [NewHQueue,HSize,HDatei]
+  flush2DLQ(HBQ2,DLQ2).
 
-  NewHQueue = Heads ++ [Entry|Tails],
-  [NewHQueue,HSize,HDatei].
+% flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
+flush2DLQ(HBQ,DLQ) -> undefined.
 
 pushAll(Queue,[], _) -> Queue;
 pushAll(Queue, [X|Xs], Datei) ->
   NewQueue = dlq:push2DLQ(Queue, X),
   pushAll(NewQueue, Xs, Datei).
+
+% sortedInsert: HQueue -> Entry -> HQueue
+sortedInsert(HQueue, [NNr,_,_] = Entry) -> 
+  CMP = fun([NNr2,_,_]) -> NNr >= NNr2 end,
+  Heads = lists:takewhile(CMP, HQueue),
+  Tails = lists:dropwhile(CMP, HQueue),
+  Heads ++ [Entry|Tails].
+
+% Schreibt eine Fehlernachricht in die DLQ falls die HBQ zu groß ist.
+% closeGapIfTooBig: HBQ -> DLQ -> Int -> DLQ
+closeGapIFTooBig(HBQ,DLQ,ExpNr) ->
+  [HQueue,HSize,HDatei] = HBQ,
+  % 2. Falls HBQ zu groß und eine Lücke vorne
+  GapAtBeginning = case HQueue of
+    [[Nr2,_,_]|_] -> ExpNr + 1 /= Nr2;
+    _ -> false
+  end,
+  TooBig = lists:size(HQueue) > HSize,
+
+  % dann: Fehlernachricht erzeugen und in die DLQ pushen
+  DLQ2 = case (TooBig and GapAtBeginning) of
+    true ->
+      [[SmallestNrInHBQ,_,_]|_] = HQueue, % Lücke von ExpNr bis SmallestNrInHBQ
+      FehlerMSG = fehlerNachricht(ExpNr,SmallestNrInHBQ),
+      push2DLQ(DLQ,FehlerMSG,HDatei);
+    false -> DLQ
+  end,
+  DLQ2.
+
+% Fehlernachricht erzeugen:
+fehlerNachricht(ExpNr,SmallestNrInHBQ) -> undefined.
 
 
 % Abfrage einer Nachricht
@@ -90,6 +121,12 @@ deliverMSG([HBQ, DLQ, Datei], [NNr,ToClient]) ->
 % Terminierung der HBQ
 % HBQ ! {self(), {request,dellHBQ}}
 % receive {reply, ok} 
-dellHBQ() -> undefined.
+dellHBQ(ConfigList) ->
+  {ok, HbqName} = get_config_value(hbqname, ConfigList),
+  case unregister(HbqName) of
+    true -> ok;
+    _ -> nok
+  end.
+
 
 
