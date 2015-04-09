@@ -7,10 +7,16 @@ initDLQ(Size, Datei) ->
   [[], Size, Datei].
 
 % Abfrage welche Nachrichtennummer in der DLQ gespeichert werden kann
-expectedNr(Queue) -> undefined.
+expectedNr(Queue) -> 1;
+expectedNr(Queue) -> 
+  [NNr,_,_] = lists:last(Queue),
+  NNR.
 
 % Speichern einer Nachricht in der DLQ
-push2DLQ([NNr,Msg,TSclientout,TShbqin],Queue,Datei) -> undefined.
+% [NNr,Msg,TSclientout,TShbqin]
+push2DLQ(Queue,Entry,Datei) ->
+  Queue ++ [Entry].
 
 % Ausliefern einer Nachricht an einen Leser-Client
 deliverMSG(MSGNr,ClientPID,Queue,Datei) -> undefined.
+
