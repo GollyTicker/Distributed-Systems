@@ -3,6 +3,12 @@
 -import(werkzeug,[logging/2,get_config_value/2,to_String/1]).
 -export([start/0]).
 
+% lc([server,hbq,...])
+% make:all().
+% unregister(SERVERPID).
+% f().
+
+
 % Abweichungen vom Entwurf:
 % 1. getClientNNr
   % als Antwort von getClientNNr kommt nicht nur die Nummer
