@@ -10,7 +10,7 @@ initDLQ(Size, Datei) ->
 expectedNr(Queue) -> 1;
 expectedNr(Queue) -> 
   [NNr,_,_] = lists:last(Queue),
-  NNR.
+  NNr.
 
 % Speichern einer Nachricht in der DLQ
 % [NNr,Msg,TSclientout,TShbqin]

@@ -64,19 +64,18 @@ pushHBQ(HBQ, DLQ, Entry) ->
   NewHQueue = Heads ++ [Entry|Tails],
   
   Diff = lists:size(DQueue) - DSize,
-  NewDQueue = if Diff >= 0 then
-    pushAll(DQueue, lists:sublist(HBQueue, 1, Diff), DDatei)
-  else
-    lists:sublist(DQueue, -Diff, lists:size(DQueue))
+  NewDQueue = case Diff >= 0 of
+    true -> pushAll(DQueue, lists:sublist(HQueue, 1, Diff), DDatei);
+    false -> lists:sublist(DQueue, -Diff, lists:size(DQueue))
   end,
 
   NewHQueue = Heads ++ [Entry|Tails],
-  [NewHQueue,Size,Datei].
+  [NewHQueue,HSize,HDatei].
 
 pushAll(Queue,[], _) -> Queue;
 pushAll(Queue, [X|Xs], Datei) ->
   NewQueue = dlq:push2DLQ(Queue, X),
-  pushAll(NewQueue, Xs, Date).
+  pushAll(NewQueue, Xs, Datei).
 
 
 % Abfrage einer Nachricht
@@ -85,6 +84,7 @@ pushAll(Queue, [X|Xs], Datei) ->
 deliverMSG([HBQ, DLQ, Datei], [NNr,ToClient]) -> 
   [HBQueue,_,_] = HBQ,
   [DLQueue,_,_] = DLQ,
+  undefined.
 
 
 % Terminierung der HBQ
