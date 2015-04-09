@@ -72,8 +72,8 @@ getClientNNr(CMEM,ClientID) ->
 
 
 % Hilfsmethode um einen Client zu holen: Returnt ein false oder ein Tupel
-% getClient: ClientID -> Map -> ({Nr,Timestamp} | false)
-getClient(ClientID,Map) ->
+% getClient: ClientID -> CMEM -> ({Nr,Timestamp} | false)
+getClient(ClientID,[Map,_,_]) ->
   case lists:keytake(ClientID,1,Map) of
     false -> false;
     {_,NNr,TS} -> {NNr,TS}
