@@ -21,25 +21,25 @@ start() ->
 
 
 spawnClients(N, ServerService, ClientConfig) -> 
-  case N > 0 of
-    true -> 
+  case N of
+    0 -> ok;
+    _ -> 
       spawnClient(N, ServerService, ClientConfig),
-      spawnClients(N-1, ServerService, ClientConfig);
-    false -> ok
+      spawnClients(N-1, ServerService, ClientConfig)
   end.
 
 spawnClient(ClientNumber, 
             ServerService, 
             {LifeTime, SendIntervall}) ->
-  spawn(
-    fun() -> 
-      Datei = createLogFile(ClientNumber),
-      log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
-      loop(ServerService, 
-          {ClientNumber,LifeTime,SendIntervall}, 
-          Datei) 
-    end
-  ).
+              spawn(
+                fun() -> 
+                  Datei = createLogFile(ClientNumber),
+                  log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
+                  loop(ServerService, 
+                      {ClientNumber,LifeTime,SendIntervall}, 
+                      Datei) 
+                end
+              ).
 
 loop(ServerService, 
     {ClientNumber, LifeTime, SendIntervall}, 
