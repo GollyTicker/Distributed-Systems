@@ -1,6 +1,7 @@
 
 -module(server).
--import(werkzeug,[logging/2,get_config_value/2,to_String/1]).
+-import(werkzeug,[get_config_value/2,to_String/1]).
+-import(utils,[log/3]).
 -export([start/0,client/1]).
 
 % lc([server,hbq,...])
@@ -30,18 +31,18 @@ client(S) ->
 % start: IO PID
 start() ->
   {ok, ConfigList} = file:consult("server.cfg"),
-  PID = spawn( fun() -> State = initServer(ConfigList), loop(State) end),
+  Datei = list_to_atom("log/Server@" ++ atom_to_list(node()) ++ ".log"),
+  PID = spawn( fun() -> State = initServer(ConfigList,Datei), loop(State) end),
   {ok, ServerName} = get_config_value(servername, ConfigList),
   register(ServerName,PID),
+  log(Datei,server,["Registered as ",ServerName," on ",node()," with addr ",PID]),
   PID. 
 
 
 % initialisieren des CMEM, HBQ, DLQ, Logging und Erzeugen des Initialzustands
 % initServer: ConfigList -> State
-initServer(ConfigList) -> 
-
-  Datei = list_to_atom("log/Server@" ++ atom_to_list(node()) ++ ".log"),
-  logging(Datei, "Initalizing Server\n"),
+initServer(ConfigList,Datei) -> 
+  log(Datei,server,["Initalizing Server"]),
 
   {ok, RemTime} = get_config_value(clientlifetime, ConfigList),
   CMEM = cmem:initCMEM(RemTime,Datei),
@@ -49,24 +50,30 @@ initServer(ConfigList) ->
   {ok, HBQnode} = get_config_value(hbqnode,ConfigList),
   {ok, HBQname} = get_config_value(hbqname,ConfigList),
   HBQservice = {HBQname,HBQnode},
-  logging(Datei, "Initializing HBQ - Address: " ++ werkzeug:to_String(HBQservice) ++ "\n"),
+  log(Datei, server,["Initializing hbq - Address: ",HBQservice]),
   HBQservice ! {self(), {request,initHBQ}},
   receive
-    {reply, ok} -> logging(Datei, "Erhielt OK von HBQ\n")
+    {reply, ok} -> log(Datei,server,["Received ok from hbq"])
   end,
   
-  logging(Datei, "initialized Server\n"),
+  log(Datei,server,["Initialized Server"]),
   State = [0,1, CMEM, HBQservice, ConfigList, Datei],
   State.
 
 
 % loop: State -> Nothing
 loop([LoopNr,Nr,CMEM, HBQ, ConfigList, Datei]) ->
-  logging(Datei, io_lib:format("======= ~p =======\n",[LoopNr])),
+  log(Datei,server,["======= ",LoopNr," ======="]),
   receive
     Any ->
-      logging(Datei,"Received: " ++ to_String(Any) ++ "\n"),
+      log(Datei,server,["Received: ",Any]),
       case Any of 
+      
+        {Redakteur, getmsgid}  ->
+          Redakteur ! {nid, Nr},
+          log(Datei,server,["MsgNr ",Nr," to editor ",Redakteur]),
+          loop([LoopNr+1,Nr+1,CMEM, HBQ, ConfigList, Datei]);
+          
         {Client, getmessages} ->
           {ClientNr,CMEM2} = cmem:getClientNNr(CMEM,Client),
           HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
@@ -79,12 +86,9 @@ loop([LoopNr,Nr,CMEM, HBQ, ConfigList, Datei]) ->
         {dropmessage, [NNr,Msg,TSclientout]} -> 
           HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
           receive {reply, ok} ->
+            log(Datei,server,["Inserted ",NNr," into hbq"]),
             loop([LoopNr+1,Nr,CMEM, HBQ, ConfigList, Datei]) 
           end;
-        
-        {Redakteur, getmsgid}  ->
-          Redakteur ! {nid, Nr},
-          loop([LoopNr+1,Nr+1,CMEM, HBQ, ConfigList, Datei]);
           
         {Sender,shutdown} -> 
           HBQ ! {self(),{request,dellHBQ}},
@@ -93,13 +97,14 @@ loop([LoopNr,Nr,CMEM, HBQ, ConfigList, Datei]) ->
           end,
           {ok, ServerName} = get_config_value(servername, ConfigList),
           Sender ! case unregister(ServerName) of
-            true -> logging(Datei,"Shutdown Server."), ok;
+            true -> log(Datei,server,["Shutdown Server ",now()]), ok;
             _ -> nok
           end;
 
         Any ->
-          logging(Datei,"Received unknown message: " ++ to_String(Any) ++ "\n"),
+          log(Datei,server,["Received unknown message: ",Any]),
           loop([LoopNr+1,Nr,CMEM, HBQ, ConfigList, Datei])
+          
       end
   end
   .

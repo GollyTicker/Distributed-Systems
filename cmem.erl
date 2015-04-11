@@ -1,5 +1,6 @@
 -module(cmem).
 -import(werkzeug,[logging/2,get_config_value/2,to_String/1]).
+-import(utils,[log/3]).
 -export([initCMEM/2,updateClient/4,getClientNNr/2, refreshCMEM/1]).
 
 % CMEM ADT: [LastSeenMapping,RemTime,Datei]
@@ -11,24 +12,19 @@
 % initCMEM: Int -> Datei -> CMEM
 initCMEM(RemTime,Datei) ->
   CMEM = [[], RemTime, Datei],
-  logging(Datei,"Initialized CMEM\n"),
+  log(Datei,cmem,["Initialized cmem"]),
   CMEM.
 
 % updateClient: Speichern/Aktualisieren eines Clients in dem CMEM
 % updateClient: CMEM -> ClientID -> Nr -> Datei -> CMEM
-updateClient(CMEM,ClientID,NNr,Datei) ->
-
-  logging(Datei, io_lib:format("updateClient(~p,~p,~p,~p)\n",[CMEM,ClientID,NNr,Datei])),
-  
-  [LastSeenMap, RemTime, Datei] = CMEM,
-  
-  % Einfügen des Clients in die Map
-  NewMap2 = insert(ClientID,NNr,LastSeenMap),
-  CMEM2 = [NewMap2,RemTime,Datei],
-  
-  logging(Datei, io_lib:format("updateClient: new CMEM: ~p\n",[CMEM2])),
-  CMEM2.
-
+updateClient([Map,Rem,CDatei] = CMEM,ClientID,NNr,Datei) ->
+  Elem = {ClientID,NNr,erlang:now()},
+  case getClient(ClientID,CMEM) of
+    false -> log(Datei,cmem,["Added new Client ",ClientID]);
+    _ -> log(Datei,cmem,["Updated Client ",ClientID," to ",NNr])
+  end,
+  Map2 = lists:keystore(ClientID,1,Map,Elem),
+  [Map2,Rem,CDatei].
 
 % Löscht veraltete Clients aus der CMEM.
 % refreshCMEM: CMEM -> CMEM
@@ -79,11 +75,7 @@ getClient(ClientID,[Map,_,_]) ->
     {_,NNr,TS} -> {NNr,TS}
   end.
 
-% Client in CMEM (neu) einfügen
-% insert: ClientID -> Nr -> Map -> Map
-insert(ClientID,NNr,Map) ->
-  Elem = {ClientID,NNr,erlang:now()},
-  lists:keystore(ClientID,1,Map,Elem).
+
 
 % datei: CMEM -> Datei
 datei([_,_,Datei]) -> Datei.
