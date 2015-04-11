@@ -1,10 +1,11 @@
 -module(dlq).
 -export([initDLQ/2, expectedNr/1, push2DLQ/3, deliverMSG/4]).
--import(werkzeug,[logging/2,to_String/1]).
+-import(werkzeug,[to_String/1]).
+-import(utils,[log/3]).
 
 
 initDLQ(Size, Datei) -> 
-  werkzeug:logging(Datei, "initialized DLQ\n"),
+  werkzeug:logging(Datei, "initialized dlq"),
   [[], Size, Datei].
 
 % Eine Message ist entweder eine Fehlermessage die eine Lücke von Nachricht Nr1 bis Nr2 schließt
@@ -19,19 +20,25 @@ expectedNr([DQueue,_,_]) -> getNr(lists:last(DQueue)) + 1.
 push2DLQ([DQueue,Size,Datei],Entry,_) ->
   DQueue2 = case length(DQueue) of
     Size ->
-      logging(Datei,"DLQ zu groß. älteste Nachricht entfernen."),
+      log(Datei,dlq,["dlq too big. removing oldest message"]),
       tl(DQueue);
-    Smaller -> DQueue
+    _Smaller -> DQueue
   end,
-  [DQueue2 ++ [Entry],Size,Datei].
+  TSdlqin = now(),
+  Entry2 = Entry ++ [TSdlqin],
+  log(Datei,dlq,["Message ",getNr(Entry)," into dlq"]),
+  [DQueue2 ++ [Entry2],Size,Datei].
 
-% TODO: Bei deliver die Fehlernachrichten berücksichtigen.
 % Ausliefern einer Nachricht an einen Leser-Client
 deliverMSG(Nr,ClientPID,DLQ,Datei) -> 
-  {Terminated, SendNr, Msg} = smallestNrGt(DLQ, Nr),
-  ClientPID ! {reply,[SendNr,Msg,now()],Terminated}.
+  {Terminated, Msg} = smallestNrGt(DLQ, Nr),
+  TSdlqout = now(),
+  Msg2 = Msg ++ [TSdlqout],
+  [SendNr|_] = Msg2,
+  ClientPID ! {reply,Msg2,Terminated},
+  log(Datei,dlq,["Message ",SendNr," sent to client ", ClientPID]).
 
-% smallestNrGt(DLQ,Nr) => {Terminated,SendNr,Msg}
+% smallestNrGt(DLQ,Nr) => {Terminated,[SendNr,Msg,TS1...TSn]}
 % Liefert die nächste höhere Nachricht nach Nr aus der DLQ zurück.
 % Gibt es diese nicht, wird eine dummy Nachricht zurückgegeben und Terminated == true.
 % Fehlernachrichten werden nicht übertragen.
@@ -41,8 +48,10 @@ smallestNrGt([Queue,_,_]=DLQ, Nr) ->
       getNr(X) < Nr and realMsg(X) 
     end, Queue),
   case DroppedQueue of
-    [] -> {true, Nr, "Sorry. No new messages for you :o"};
-    [H|_] -> {false, getNr(H), "looong complicated message..."} % TODO: Message übertragen
+    [] ->
+        TS = now(),
+        {true, [Nr,"Sorry. No new messages for you :o",TS,TS,TS]};
+    [Msg|_] -> {false, Msg}
   end.
 
 % realMsg: Entry -> Bool

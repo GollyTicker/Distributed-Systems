@@ -1,6 +1,7 @@
 -module(hbq).
 -export([start/0]).
--import(werkzeug, [logging/2, get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
+-import(utils,[log/3]).
+-import(werkzeug, [get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
 -import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1, deliverMSG/4]).
 
 % lc([server,werkzeug,cmem,hbq,dlq]).
@@ -12,23 +13,23 @@ start() ->
   Datei = list_to_atom("log/HB-DLQ@" ++ atom_to_list(node()) ++ ".log"),
   PID = spawn(fun() -> loop([a,b,Datei],ConfigList) end),
   register(HbqName, PID),
+  log(Datei,hbq,["Registered as ",HbqName," on ",node()]),
   PID.
 
 loop([HBQ, DLQ, Datei], ConfigList) ->
   receive
     Any ->
-      logging(Datei,"Received: " ++ to_String(Any) ++ "\n"),
+      log(Datei,hbq,["Received: ",Any]),
       case Any of 
 
         {Server, {request,initHBQ}} ->
-          State = initHBQ(Datei, ConfigList),
+          State = initHBQ(Datei, ConfigList, Server),
           Server ! {reply, ok},
           loop(State,ConfigList);
 
         {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
           {NewHBQ, NewDLQ} = pushHBQ(HBQ, DLQ, [NNr,Msg,TSclientout]),
           Server ! {reply, ok},
-          logging(Datei, "pushHBQ - HBQ new msg: " ++ to_String([NNr,Msg,TSclientout]) ++ "\n"),
           loop([NewHBQ, NewDLQ, Datei],ConfigList);
 
         {Server, {request,deliverMSG, NNr,ToClient}} ->
@@ -37,11 +38,11 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
           loop([HBQ, DLQ, Datei],ConfigList);
 
         {Server, {request,dellHBQ}} ->
-          HBQDead = dellHBQ(ConfigList),
+          HBQDead = dellHBQ(ConfigList,Datei),
           Server ! {reply, HBQDead};
 
         Any -> 
-          logging(Datei, "Received unknown message: " ++ to_String(Any) ++ "\n")
+          log(Datei,hbq,["Received unknown message: ",Any])
 
       end
   end.
@@ -49,10 +50,12 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
 % Initialisieren der HBQ
 % HBQ ! {self(), {request,initHBQ}}
 % receive {reply, ok} 
-initHBQ(Datei, ConfigList) -> 
+initHBQ(Datei, ConfigList, Server) -> 
   {ok,DLQLimit} = get_config_value(dlqlimit, ConfigList),
-  HBQ = [[], (2*DLQLimit)/3, Datei],
-  logging(Datei, "initialized HBQ\n"),
+  Size = (2*DLQLimit)/3,
+  SizeStr = float_to_list(Size,[{decimals,0}]),
+  HBQ = [[], Size, Datei],
+  log(Datei,hbq,["HBQ>> initialized HBQ, size = ",SizeStr," by ",Server]),
   DLQ = initDLQ(DLQLimit, Datei),
   [HBQ, DLQ, Datei].
 
@@ -64,8 +67,10 @@ initHBQ(Datei, ConfigList) ->
 pushHBQ([HQueue,HSize,HDatei] = HBQ,
         DLQ,
         Entry) -> 
+  TShbqin = now(),
+  Entry2 = Entry ++ [TShbqin],
   % 1. in HBQ einfügen
-  NewHQueue = sortedInsert(HQueue,Entry),
+  NewHQueue = sortedInsert(HQueue,Entry2,HDatei),
   % 2. expected nr holen
   ExpNr = expectedNr(DLQ),
   % 3. Lücke schließen, falls die HBQ zu groß ist
@@ -75,23 +80,25 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
   flush2DLQ(HBQ2,DLQ2).
 
 % flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
-flush2DLQ([[],_,_]=HBQ,DLQ) -> {HBQ, DLQ};
+flush2DLQ([[],_,Datei]=HBQ,DLQ) ->
+  log(Datei,hbq,["hbq completely flushed into dlq"]),
+  {HBQ, DLQ};
 flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) -> 
   [HNr,_,_] = HH,
   ExpNr = expectedNr(DLQ),
   case ExpNr == HNr of
     true -> 
       NewDLQ = push2DLQ(DLQ,HH,HDatei),
-      logging(HDatei,"HBQ -> DLQ - Nr: " ++ to_String(ExpNr) ++ "\n"),
       flush2DLQ([HTail,HSize,HDatei],NewDLQ);
     false -> {HBQ, DLQ}
   end.
 
-% sortedInsert: HQueue -> Entry -> HQueue
-sortedInsert(HQueue, [NNr,_,_] = Entry) -> 
+% sortedInsert: HQueue -> Entry -> Datei -> HQueue
+sortedInsert(HQueue, [NNr,_,_] = Entry,Datei) -> 
   CMP = fun([NNr2,_,_]) -> NNr >= NNr2 end,
   Heads = lists:takewhile(CMP, HQueue),
   Tails = lists:dropwhile(CMP, HQueue),
+  log(Datei,hbq,["Message ",NNr," into hbq"]),
   Heads ++ [Entry|Tails].
 
 % Schreibt eine Fehlernachricht in die DLQ falls die HBQ zu groß ist.
@@ -109,26 +116,33 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
   DLQ2 = case (TooBig and GapAtBeginning) of
     true ->
       [[SmallestNrInHBQ,_,_]|_] = HQueue, % Lücke von ExpNr bis SmallestNrInHBQ
-      FehlerMSG = fehlerNachricht(ExpNr,SmallestNrInHBQ),
+      FehlerMSG = fehlerNachricht(ExpNr,SmallestNrInHBQ,HDatei),
       push2DLQ(DLQ,FehlerMSG,HDatei);
     false -> DLQ
   end,
   DLQ2.
 
 % Fehlernachricht erzeugen:
-fehlerNachricht(ExpNr,SmallestNrInHBQ) -> 
-  Msg = io_lib:format("Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ~p\n",[ExpNr, SmallestNrInHBQ - 1, timeMilliSecond()]),
-  [{ExpNr, SmallestNrInHBQ - 1}, Msg, erlang:now()].
+fehlerNachricht(ExpNr,SmallestNrInHBQ,Datei) -> 
+  To = SmallestNrInHBQ - 1,
+  Msg = io_lib:format(
+    "Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ~p\n",
+    [ExpNr, To, timeMilliSecond()]),
+  TS = now(),
+  log(Datei,hbq,["Generated missing message from ",ExpNr," to ",To]),
+  % TSclientout, TShbqin, TShbqout
+  [{ExpNr, To}, Msg,TS,TS,TS].
 
 % Terminierung der HBQ
 % HBQ ! {self(), {request,dellHBQ}}
 % receive {reply, ok} 
-dellHBQ(ConfigList) ->
+dellHBQ(ConfigList,Datei) ->
   {ok, HbqName} = get_config_value(hbqname, ConfigList),
   case unregister(HbqName) of
     true -> ok;
     _ -> nok
-  end.
+  end,
+  log(Datei,hbq,["Shutdown hbq and dlq"]).
 
 
 
