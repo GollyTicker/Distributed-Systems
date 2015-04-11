@@ -17,9 +17,10 @@ initCMEM(RemTime,Datei) ->
 
 % updateClient: Speichern/Aktualisieren eines Clients in dem CMEM
 % updateClient: CMEM -> ClientID -> Nr -> Datei -> CMEM
-updateClient([Map,Rem,CDatei] = CMEM,ClientID,NNr,Datei) ->
+updateClient(CMEM,ClientID,NNr,Datei) ->
+  [Map,Rem,CDatei] = CMEM2 = refreshCMEM(CMEM),
   Elem = {ClientID,NNr,erlang:now()},
-  case getClient(ClientID,CMEM) of
+  case getClient(ClientID,CMEM2) of
     false -> log(Datei,cmem,["Added new Client ",ClientID]);
     _ -> log(Datei,cmem,["Updated Client ",ClientID," to ",NNr])
   end,
@@ -28,42 +29,31 @@ updateClient([Map,Rem,CDatei] = CMEM,ClientID,NNr,Datei) ->
 
 % Löscht veraltete Clients aus der CMEM.
 % refreshCMEM: CMEM -> CMEM
-refreshCMEM(CMEM) ->
-  [LastSeenMap, RemTime, Datei] = CMEM,
+refreshCMEM([LastSeenMap, RemTime, Datei]) ->
+  NewMap =
+    lists:filter( % Alle veralteten Clients filtern.
+      fun({ClientID,_NNr,{MegaSec,Sec,MicroSec}}) ->
+        LastSeenPlusRemTime = {MegaSec,Sec + RemTime, MicroSec},
+        Now = erlang:now(),
+        case werkzeug:compareNow(LastSeenPlusRemTime,Now) of
+          before ->
+            log(Datei,cmem,["Deleting inactive client: ",ClientID]),
+            false;
+          _ -> true
+        end
+      end,
+     LastSeenMap),
   
-  % Alle veralteten Clients filtern.
-  NewMap = lists:filter(
-                        fun({ClientID,_NNr,{MegaSec,Sec,MicroSec}}) ->
-                          logging(Datei,"refreshCMEM: Client last seen: " ++ to_String({MegaSec,Sec,MicroSec}) ++ "\n"),
-                          LastSeenPlusRemTime = {MegaSec,Sec + RemTime, MicroSec},
-                          Now = erlang:now(),
-                          case werkzeug:compareNow(LastSeenPlusRemTime,Now) of
-                            before ->
-                              logging(Datei, "refreshCMEM:Client vergessen: " ++ to_String(ClientID) ++ "\n"),
-                              false;
-                            _ -> true
-                          end
-                        end
-                        ,LastSeenMap),
-  
-  % Speichern und zurückgeben
-  CMEM2 = [NewMap,RemTime,Datei],
-  
-  logging(Datei, io_lib:format("refreshCMEM: new CMEM: ~p\n",[CMEM2])),
-  CMEM2.
+  [NewMap,RemTime,Datei].
 
 
 % getClientNNr: Abfrage welche Nachrichtennummer der Client als nächstes erhalten darf
 % getClientNNr: CMEM -> ClientID -> Nr
 getClientNNr(CMEM,ClientID) ->
-  logging(datei(CMEM), io_lib:format("getClientNNr(~p,~p)\n",[CMEM,ClientID])),
-  CMEM2 = refreshCMEM(CMEM),    % löschen alter Clients
-  Nr =
-    case getClient(ClientID,CMEM2) of
+  case getClient(ClientID,CMEM) of
       {NNr,_} -> NNr;
       false -> 1   % ein unbekannter Client erhält die erste Nachricht
-    end,
-  {CMEM2,Nr}.
+  end.
 
 
 
@@ -75,8 +65,4 @@ getClient(ClientID,[Map,_,_]) ->
     {_,NNr,TS} -> {NNr,TS}
   end.
 
-
-
-% datei: CMEM -> Datei
-datei([_,_,Datei]) -> Datei.
 

@@ -5,7 +5,7 @@
 
 
 initDLQ(Size, Datei) -> 
-  werkzeug:logging(Datei, "initialized dlq"),
+  log(Datei,dlq,["initialized dlq"]),
   [[], Size, Datei].
 
 % Eine Message ist entweder eine Fehlermessage die eine Lücke von Nachricht Nr1 bis Nr2 schließt
@@ -42,7 +42,7 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
 % Liefert die nächste höhere Nachricht nach Nr aus der DLQ zurück.
 % Gibt es diese nicht, wird eine dummy Nachricht zurückgegeben und Terminated == true.
 % Fehlernachrichten werden nicht übertragen.
-smallestNrGt([Queue,_,_]=DLQ, Nr) ->
+smallestNrGt([Queue,_,_], Nr) ->
   DroppedQueue = lists:dropwhile(
     fun(X) -> 
       getNr(X) < Nr and realMsg(X) 
@@ -60,7 +60,7 @@ realMsg(_) -> true.
 
 getNr(Entry) ->
   case hd(Entry) of
-    {Nr1, Nr2} -> Nr2;
+    {_, Nr2} -> Nr2;
     Nr -> Nr
   end.
 

@@ -55,7 +55,7 @@ initHBQ(Datei, ConfigList, Server) ->
   Size = (2*DLQLimit)/3,
   SizeStr = float_to_list(Size,[{decimals,0}]),
   HBQ = [[], Size, Datei],
-  log(Datei,hbq,["HBQ>> initialized HBQ, size = ",SizeStr," by ",Server]),
+  log(Datei,hbq,["initialized hbq, size = ",SizeStr," by ",Server]),
   DLQ = initDLQ(DLQLimit, Datei),
   [HBQ, DLQ, Datei].
 
@@ -69,6 +69,7 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
         Entry) -> 
   TShbqin = now(),
   Entry2 = Entry ++ [TShbqin],
+  log(HDatei,hbq,["Should be Entry: ",to_String(Entry2)]),
   % 1. in HBQ einfügen
   NewHQueue = sortedInsert(HQueue,Entry2,HDatei),
   % 2. expected nr holen
