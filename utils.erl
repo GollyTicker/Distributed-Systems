@@ -7,9 +7,9 @@
 % log(0,hbq,["Hallo ",self()," ",[1,2]]).
 log(Datei,Module,List) -> 
   F = fun(X) ->
-    case type_is(X) of
-      list -> X;
-      _ -> to_String(X)
+    case io_lib:printable_list(X) of
+      true -> X;
+      false -> to_String(X)
     end
   end,
   Str = to_String(Module) ++ ">> " ++ lists:flatmap(F,List) ++ "\n",

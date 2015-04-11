@@ -51,15 +51,18 @@ initServer(ConfigList,Datei) ->
     {reply, ok} -> log(Datei,server,["Received ok from hbq"])
   end,
   
-  Timer = timer:send_after(Latency*1000,shutdown),
+  LatestActivity = now(),
+  
+  start_timer(Latency,LatestActivity),
   
   log(Datei,server,["Initialized Server"]),
-  State = [0,1, CMEM, HBQservice, Timer, Latency, ConfigList, Datei],
+  State = [0,1, CMEM, HBQservice, LatestActivity, Latency, ConfigList, Datei],
   State.
 
+start_timer(Latency,Now) -> timer:send_after(Latency*1000,{shutdown,Now}).
 
 % loop: State -> Nothing
-loop([LoopNr,Nr,CMEM, HBQ, Timer, Latency, ConfigList, Datei]) ->
+loop([LoopNr,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]) ->
   log(Datei,server,["======= ",LoopNr," ======="]),
   receive
     Any ->
@@ -67,30 +70,33 @@ loop([LoopNr,Nr,CMEM, HBQ, Timer, Latency, ConfigList, Datei]) ->
       case Any of 
       
         {Redakteur, getmsgid}  ->
-          NewTimer = werkzeug:reset_timer(Timer,Latency,shutdown),
           Redakteur ! {nid, Nr},
           log(Datei,server,["MsgNr ",Nr," to editor ",Redakteur]),
-          loop([LoopNr+1,Nr+1,CMEM, HBQ, NewTimer, Latency, ConfigList, Datei]);
+          Now = now(),
+          start_timer(Latency,Now),
+          loop([LoopNr+1,Nr+1,CMEM, HBQ, Now, Latency, ConfigList, Datei]);
           
         {Client, getmessages} ->
-          NewTimer = werkzeug:reset_timer(Timer,Latency,shutdown),
           ClientNr = cmem:getClientNNr(CMEM,Client),
           HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
           receive
             {reply,SendNr} ->
               CMEM2 = cmem:updateClient(CMEM,Client,SendNr,Datei),
-              loop([LoopNr+1,Nr,CMEM2, HBQ, NewTimer, Latency, ConfigList, Datei])
+              Now = now(),
+              start_timer(Latency,Now),
+              loop([LoopNr+1,Nr,CMEM2, HBQ, Now, Latency, ConfigList, Datei])
           end;
         
         {dropmessage, [NNr,Msg,TSclientout]} -> 
-          NewTimer = werkzeug:reset_timer(Timer,Latency,shutdown),
           HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
           receive {reply, ok} ->
             log(Datei,server,["Inserted ",NNr," into hbq"]),
-            loop([LoopNr+1,Nr,CMEM, HBQ, NewTimer, Latency, ConfigList, Datei]) 
+            Now = now(),
+            start_timer(Latency,Now),
+            loop([LoopNr+1,Nr,CMEM, HBQ, Now, Latency, ConfigList, Datei]) 
           end;
           
-        shutdown -> 
+        {shutdown,LatestActivity} -> % matching mit der letzten Aktivität
           HBQ ! {self(),{request,dellHBQ}},
           receive 
             {reply, HBQDead} -> HBQDead
@@ -100,11 +106,16 @@ loop([LoopNr,Nr,CMEM, HBQ, Timer, Latency, ConfigList, Datei]) ->
             true -> log(Datei,server,["Shutdown Server ",now()]), ok;
             _ -> nok
           end;
+          
+        {shutdown,_PrevActivity} ->
+          log(Datei,server,["Ignoring shutdown"]),% dont shut down yet
+          loop([LoopNr+1,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]);
 
         Any ->
           log(Datei,server,["Received unknown message: ",Any]),
-          NewTimer = werkzeug:reset_timer(Timer,Latency,shutdown),
-          loop([LoopNr+1,Nr,CMEM, HBQ, NewTimer, Latency, ConfigList, Datei])
+          Now = now(),
+          start_timer(Latency,Now),
+          loop([LoopNr+1,Nr,CMEM, HBQ, Now, Latency, ConfigList, Datei])
           
       end
   end

@@ -1,11 +1,24 @@
 -module(hbq).
--export([start/0]).
+-export([start/0,testInit/0,testSend/2]).
 -import(utils,[log/3]).
 -import(werkzeug, [get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
 -import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1, deliverMSG/4]).
 
 % lc([server,werkzeug,cmem,hbq,dlq]).
 % HBQ = hbq:start().
+
+
+% H = hbq:testInit().
+testInit() ->
+  H = start(),
+  H ! {self(),{request,initHBQ}},receive X -> X end,
+  testSend(H,1),
+  H.
+  
+testSend(H,N) ->
+  H ! {self(),{request,pushHBQ,[N,"Hallo",now()]}}, receive X -> X end.
+
+
 
 start() ->
   {ok, ConfigList} = file:consult("server.cfg"),
@@ -69,7 +82,7 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
         Entry) -> 
   TShbqin = now(),
   Entry2 = Entry ++ [TShbqin],
-  log(HDatei,hbq,["Should be Entry: ",to_String(Entry2)]),
+  log(HDatei,hbq,["Should be Entry: ",Entry2]),
   % 1. in HBQ einfügen
   NewHQueue = sortedInsert(HQueue,Entry2,HDatei),
   % 2. expected nr holen
@@ -85,7 +98,7 @@ flush2DLQ([[],_,Datei]=HBQ,DLQ) ->
   log(Datei,hbq,["hbq completely flushed into dlq"]),
   {HBQ, DLQ};
 flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) -> 
-  [HNr,_,_] = HH,
+  [HNr|_] = HH,
   ExpNr = expectedNr(DLQ),
   case ExpNr == HNr of
     true -> 
@@ -95,8 +108,8 @@ flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) ->
   end.
 
 % sortedInsert: HQueue -> Entry -> Datei -> HQueue
-sortedInsert(HQueue, [NNr,_,_] = Entry,Datei) -> 
-  CMP = fun([NNr2,_,_]) -> NNr >= NNr2 end,
+sortedInsert(HQueue, [NNr|_] = Entry,Datei) -> 
+  CMP = fun([NNr2|_]) -> NNr >= NNr2 end,
   Heads = lists:takewhile(CMP, HQueue),
   Tails = lists:dropwhile(CMP, HQueue),
   log(Datei,hbq,["Message ",NNr," into hbq"]),
@@ -108,7 +121,7 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
   [HQueue,HSize,HDatei] = HBQ,
   % 2. Falls HBQ zu groß und eine Lücke vorne
   GapAtBeginning = case HQueue of
-    [[Nr2,_,_]|_] -> ExpNr + 1 /= Nr2;
+    [[Nr2|_]|_] -> ExpNr + 1 /= Nr2;
     _ -> false
   end,
   TooBig = length(HQueue) > HSize,
@@ -116,7 +129,7 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
   % dann: Fehlernachricht erzeugen und in die DLQ pushen
   DLQ2 = case (TooBig and GapAtBeginning) of
     true ->
-      [[SmallestNrInHBQ,_,_]|_] = HQueue, % Lücke von ExpNr bis SmallestNrInHBQ
+      [[SmallestNrInHBQ|_]|_] = HQueue, % Lücke von ExpNr bis SmallestNrInHBQ
       FehlerMSG = fehlerNachricht(ExpNr,SmallestNrInHBQ,HDatei),
       push2DLQ(DLQ,FehlerMSG,HDatei);
     false -> DLQ
