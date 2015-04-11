@@ -1,7 +1,7 @@
 -module(hbq).
 -export([start/0]).
 -import(werkzeug, [logging/2, get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
--import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1]).
+-import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1, deliverMSG/4]).
 
 % lc([server,werkzeug,cmem,hbq,dlq]).
 % HBQ = hbq:start().
@@ -16,30 +16,34 @@ start() ->
 
 loop([HBQ, DLQ, Datei], ConfigList) ->
   receive
+    Any ->
+      logging(Datei,"Received: " ++ to_String(Any) ++ "\n"),
+      case Any of 
 
-    {Server, {request,initHBQ}} ->
-      State = initHBQ(Datei, ConfigList),
-      Server ! {reply, ok},
-      loop(State,ConfigList);
+        {Server, {request,initHBQ}} ->
+          State = initHBQ(Datei, ConfigList),
+          Server ! {reply, ok},
+          loop(State,ConfigList);
 
-    {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
-      {NewHBQ, NewDLQ} = pushHBQ(HBQ, DLQ, [NNr,Msg,TSclientout]),
-      Server ! {reply, ok},
-      % logging(Datei, "HBQ content: " ++ to_String(NewHBQ) ++ "\n"),
-      loop([NewHBQ, NewDLQ, Datei],ConfigList);
+        {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
+          {NewHBQ, NewDLQ} = pushHBQ(HBQ, DLQ, [NNr,Msg,TSclientout]),
+          Server ! {reply, ok},
+          logging(Datei, "pushHBQ - HBQ new msg: " ++ to_String([NNr,Msg,TSclientout]) ++ "\n"),
+          loop([NewHBQ, NewDLQ, Datei],ConfigList);
 
-    {Server, {request,deliverMSG, NNr,ToClient}} ->
-      SendNNr = deliverMSG([HBQ, DLQ, Datei], [NNr,ToClient]),
-      Server ! {reply, SendNNr},
-      loop([HBQ, DLQ, Datei],ConfigList);
+        {Server, {request,deliverMSG, NNr,ToClient}} ->
+          SendNNr = deliverMSG(NNr,ToClient,DLQ,Datei),
+          Server ! {reply, SendNNr},
+          loop([HBQ, DLQ, Datei],ConfigList);
 
-    {Server, {request,dellHBQ}} ->
-      HBQDead = dellHBQ(ConfigList),
-      Server ! {reply, HBQDead};
+        {Server, {request,dellHBQ}} ->
+          HBQDead = dellHBQ(ConfigList),
+          Server ! {reply, HBQDead};
 
-    Any -> 
-      logging(Datei, "Received unknown message: " ++ to_String(Any) ++ "\n")
+        Any -> 
+          logging(Datei, "Received unknown message: " ++ to_String(Any) ++ "\n")
 
+      end
   end.
 
 % Initialisieren der HBQ
@@ -78,6 +82,7 @@ flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) ->
   case ExpNr == HNr of
     true -> 
       NewDLQ = push2DLQ(DLQ,HH,HDatei),
+      logging(HDatei,"HBQ -> DLQ - Nr: " ++ to_String(ExpNr) ++ "\n"),
       flush2DLQ([HTail,HSize,HDatei],NewDLQ);
     false -> {HBQ, DLQ}
   end.
@@ -98,7 +103,7 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
     [[Nr2,_,_]|_] -> ExpNr + 1 /= Nr2;
     _ -> false
   end,
-  TooBig = lists:size(HQueue) > HSize,
+  TooBig = length(HQueue) > HSize,
 
   % dann: Fehlernachricht erzeugen und in die DLQ pushen
   DLQ2 = case (TooBig and GapAtBeginning) of
@@ -114,16 +119,6 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
 fehlerNachricht(ExpNr,SmallestNrInHBQ) -> 
   Msg = io_lib:format("Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ~p\n",[ExpNr, SmallestNrInHBQ - 1, timeMilliSecond()]),
   [{ExpNr, SmallestNrInHBQ - 1}, Msg, erlang:now()].
-
-
-% Abfrage einer Nachricht
-% HBQ ! {self(), {request,deliverMSG,NNr,ToClient}}
-% receive {reply, SendNNr}
-deliverMSG([HBQ, DLQ, Datei], [NNr,ToClient]) -> 
-  [HBQueue,_,_] = HBQ,
-  [DLQueue,_,_] = DLQ,
-  undefined.
-
 
 % Terminierung der HBQ
 % HBQ ! {self(), {request,dellHBQ}}

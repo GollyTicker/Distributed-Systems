@@ -1,12 +1,19 @@
 
 -module(server).
 -import(werkzeug,[logging/2,get_config_value/2,to_String/1]).
--export([start/0]).
+-export([start/0,client/1]).
 
 % lc([server,hbq,...])
 % make:all().
 % unregister(SERVERPID).
 % f().
+
+client(S) ->
+  S ! {self(), getmsgid},
+  receive
+    {nid,Nr} -> S ! {dropmessage,[Nr,"Hallo",erlang:now()]}
+  end,
+  0.
 
 
 % Abweichungen vom Entwurf:
@@ -57,26 +64,43 @@ initServer(ConfigList) ->
 loop([LoopNr,Nr,CMEM, HBQ, ConfigList, Datei]) ->
   logging(Datei, io_lib:format("======= ~p =======\n",[LoopNr])),
   receive
-    
-    {Client, getmessages} ->
-      {ClientNr,CMEM2} = cmem:getClientNNr(CMEM,Client),
-      HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
-      loop([LoopNr+1,Nr,CMEM2, HBQ, ConfigList, Datei]);
-    
-    {reply,ClientID,SendNNr} ->
-      CMEM2 = cmem:updateClient(CMEM,ClientID,SendNNr,Datei),
-      loop([LoopNr+1,Nr,CMEM2, HBQ, ConfigList, Datei]);
-    
-    {dropmessage, [NNr,Msg,TSclientout]} -> undefined;
-    
-    {Redakteur, getmsdid}  ->
-      Redakteur ! {nid, Nr},
-      loop([LoopNr+1,Nr+1,CMEM, HBQ, ConfigList, Datei]);
-      
     Any ->
-      logging(Datei,"Received unknown message: " ++ to_String(Any) ++ "\n"),
-      loop([LoopNr+1,Nr,CMEM, HBQ, ConfigList, Datei])
-    
+      logging(Datei,"Received: " ++ to_String(Any) ++ "\n"),
+      case Any of 
+        {Client, getmessages} ->
+          {ClientNr,CMEM2} = cmem:getClientNNr(CMEM,Client),
+          HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
+          loop([LoopNr+1,Nr,CMEM2, HBQ, ConfigList, Datei]);
+        
+        {reply,ClientID,SendNNr} ->
+          CMEM2 = cmem:updateClient(CMEM,ClientID,SendNNr,Datei),
+          loop([LoopNr+1,Nr,CMEM2, HBQ, ConfigList, Datei]);
+        
+        {dropmessage, [NNr,Msg,TSclientout]} -> 
+          HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
+          receive {reply, ok} ->
+            loop([LoopNr+1,Nr,CMEM, HBQ, ConfigList, Datei]) 
+          end;
+        
+        {Redakteur, getmsgid}  ->
+          Redakteur ! {nid, Nr},
+          loop([LoopNr+1,Nr+1,CMEM, HBQ, ConfigList, Datei]);
+          
+        {Sender,shutdown} -> 
+          HBQ ! {self(),{request,dellHBQ}},
+          receive 
+            {reply, HBQDead} -> HBQDead
+          end,
+          {ok, ServerName} = get_config_value(servername, ConfigList),
+          Sender ! case unregister(ServerName) of
+            true -> logging(Datei,"Shutdown Server."), ok;
+            _ -> nok
+          end;
+
+        Any ->
+          logging(Datei,"Received unknown message: " ++ to_String(Any) ++ "\n"),
+          loop([LoopNr+1,Nr,CMEM, HBQ, ConfigList, Datei])
+      end
   end
   .
 
