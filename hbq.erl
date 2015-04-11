@@ -1,7 +1,7 @@
 -module(hbq).
 -export([start/0]).
--import(werkzeug, [logging/2, get_config_value/2, to_String/1, timeMilliSecond/0]).
--import(dlq, [initDLQ/0, push2DLQ/2]).
+-import(werkzeug, [logging/2, get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
+-import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1]).
 
 % lc([server,werkzeug,cmem,hbq,dlq]).
 % HBQ = hbq:start().
@@ -46,8 +46,8 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
 % HBQ ! {self(), {request,initHBQ}}
 % receive {reply, ok} 
 initHBQ(Datei, ConfigList) -> 
-  DLQLimit = get_config_value(dlqlimit, ConfigList),
-  HBQ = [[], DLQLimit, Datei],
+  {ok,DLQLimit} = get_config_value(dlqlimit, ConfigList),
+  HBQ = [[], (2*DLQLimit)/3, Datei],
   logging(Datei, "initialized HBQ\n"),
   DLQ = initDLQ(DLQLimit, Datei),
   [HBQ, DLQ, Datei].
@@ -91,7 +91,7 @@ sortedInsert(HQueue, [NNr,_,_] = Entry) ->
 
 % Schreibt eine Fehlernachricht in die DLQ falls die HBQ zu groß ist.
 % closeGapIfTooBig: HBQ -> DLQ -> Int -> DLQ
-closeGapIFTooBig(HBQ,DLQ,ExpNr) ->
+closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
   [HQueue,HSize,HDatei] = HBQ,
   % 2. Falls HBQ zu groß und eine Lücke vorne
   GapAtBeginning = case HQueue of
