@@ -1,6 +1,7 @@
 -module(hbq).
 -export([start/0]).
--import(werkzeug, [logging/2, get_config_value/2, to_String/1]).
+-import(werkzeug, [logging/2, get_config_value/2, to_String/1, timeMilliSecond/0]).
+-import(dlq, [initDLQ/0, push2DLQ/2]).
 
 % lc([server,werkzeug,cmem,hbq,dlq]).
 % HBQ = hbq:start().
@@ -48,7 +49,7 @@ initHBQ(Datei, ConfigList) ->
   DLQLimit = get_config_value(dlqlimit, ConfigList),
   HBQ = [[], DLQLimit, Datei],
   logging(Datei, "initialized HBQ\n"),
-  DLQ = dlq:initDLQ(DLQLimit, Datei),
+  DLQ = initDLQ(DLQLimit, Datei),
   [HBQ, DLQ, Datei].
 
 
@@ -66,16 +67,20 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
   % 3. Lücke schließen, falls die HBQ zu groß ist
   DLQ2 = closeGapIfTooBig(HBQ,DLQ,ExpNr),
   % 4. Korrekt geordnete Elemente von der HBQ in die DLQ weiterleiten.
-  HBQ2 = [NewHQueue,HSize,HDatei]
+  HBQ2 = [NewHQueue,HSize,HDatei],
   flush2DLQ(HBQ2,DLQ2).
 
 % flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
-flush2DLQ(HBQ,DLQ) -> undefined.
-
-pushAll(Queue,[], _) -> Queue;
-pushAll(Queue, [X|Xs], Datei) ->
-  NewQueue = dlq:push2DLQ(Queue, X),
-  pushAll(NewQueue, Xs, Datei).
+flush2DLQ([[],_,_]=HBQ,DLQ) -> {HBQ, DLQ};
+flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) -> 
+  [HNr,_,_] = HH,
+  ExpNr = expectedNr(DLQ),
+  case ExpNr == HNr of
+    true -> 
+      NewDLQ = push2DLQ(DLQ,HH,HDatei),
+      flush2DLQ([HTail,HSize,HDatei],NewDLQ);
+    false -> {HBQ, DLQ}
+  end.
 
 % sortedInsert: HQueue -> Entry -> HQueue
 sortedInsert(HQueue, [NNr,_,_] = Entry) -> 
@@ -106,7 +111,9 @@ closeGapIFTooBig(HBQ,DLQ,ExpNr) ->
   DLQ2.
 
 % Fehlernachricht erzeugen:
-fehlerNachricht(ExpNr,SmallestNrInHBQ) -> undefined.
+fehlerNachricht(ExpNr,SmallestNrInHBQ) -> 
+  Msg = io_lib:format("Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ~p\n",[ExpNr, SmallestNrInHBQ - 1, timeMilliSecond()]),
+  [{ExpNr, SmallestNrInHBQ - 1}, Msg, erlang:now()].
 
 
 % Abfrage einer Nachricht
