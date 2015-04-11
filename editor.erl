@@ -28,7 +28,9 @@ spawnClients(N, ServerService, ClientConfig) ->
     false -> ok
   end.
 
-spawnClient(ClientNumber, ServerService, {LifeTime, SendIntervall}) ->
+spawnClient(ClientNumber, 
+            ServerService, 
+            {LifeTime, SendIntervall}) ->
   spawn(
     fun() -> 
       Datei = createLogFile(ClientNumber),
@@ -39,18 +41,19 @@ spawnClient(ClientNumber, ServerService, {LifeTime, SendIntervall}) ->
     end
   ).
 
-loop(ServerService, {ClientNumber, LifeTime, SendIntervall}, 
+loop(ServerService, 
+    {ClientNumber, LifeTime, SendIntervall}, 
      Datei) -> 
-
   ServerService ! {self(), getmsgid},
   receive
     {nid, Nr} ->
-      ServerService ! {dropmessage, [Nr,createText(),now()]},
-      loop(ServerService, 
-          {ClientNumber, LifeTime, SendIntervall}, 
-          Datei);
-    Any -> log(Datei,editor,["Unknoqn message: ", Any])
+      ServerService ! {dropmessage, [Nr,createText(),now()]};
+    Any -> 
+      log(Datei,editor,["Unknown message: ", Any])
   end,
+  loop(ServerService, 
+      {ClientNumber, LifeTime, SendIntervall}, 
+       Datei),
 
   log(Datei,editor,["Editor ",ClientNumber," was too controversial and eliminated!"]).
 
