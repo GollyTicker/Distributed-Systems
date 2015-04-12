@@ -17,12 +17,13 @@ initCMEM(RemTime,Datei) ->
 
 % updateClient: Speichern/Aktualisieren eines Clients in dem CMEM
 % updateClient: CMEM -> ClientID -> Nr -> Datei -> CMEM
-updateClient(CMEM,ClientID,NNr,Datei) ->
+updateClient(CMEM,ClientID,SendNr,Datei) ->
+  NextNr = SendNr + 1,
   [Map,Rem,CDatei] = CMEM2 = refreshCMEM(CMEM),
-  Elem = {ClientID,NNr,erlang:now()},
+  Elem = {ClientID,NextNr,erlang:now()},
   case getClient(ClientID,CMEM2) of
     false -> log(Datei,cmem,["Added new Client ",ClientID]);
-    _ -> log(Datei,cmem,["Updated Client ",ClientID," to ",NNr])
+    _ -> log(Datei,cmem,["Updated Client ",ClientID," to ",NextNr])
   end,
   Map2 = lists:keystore(ClientID,1,Map,Elem),
   [Map2,Rem,CDatei].
@@ -62,7 +63,7 @@ getClientNNr(CMEM,ClientID) ->
 getClient(ClientID,[Map,_,_]) ->
   case lists:keytake(ClientID,1,Map) of
     false -> false;
-    {_,NNr,TS} -> {NNr,TS}
+    {value,{_client,Nr,TS},_} -> {Nr,TS}
   end.
 
 
