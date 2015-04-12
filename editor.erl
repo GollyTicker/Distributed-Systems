@@ -35,7 +35,7 @@ loop(Count, ServerService, Nrs,
 
   receive
     {nid, Nr} ->
-      Content = "Hello World", %createText(), % TODO: echte quotes einsetzen
+      Content = createText(),
       % log: dropped message NR at 16.06 09:55:43,525| content
       log(Datei,editor,["Dropped message ",Nr," at ",timeMilliSecond()," with ",Content]),
       ServerService ! {dropmessage, [Nr,Content,now()]},
@@ -46,7 +46,7 @@ loop(Count, ServerService, Nrs,
       log(Datei,editor,["Unknown message: ", Any])
   end.
 
-% Text Helper...
+% TODO: Hello world for Quotes
 createText() ->
   Quotes = [
     "People are just about as happy as they make up their minds to be - Abraham Lincoln ",
@@ -70,4 +70,5 @@ createText() ->
     "If someone betrays you once, its his fault. If he betrays you twice, its your fault ",
     "God Gives every bird its food, But he does not throw it into its nest "
   ],
-  lists:nth(randomInt(length(Quotes)), Quotes).
+  lists:nth(randomInt(length(Quotes)), Quotes),
+  "Hello World".
