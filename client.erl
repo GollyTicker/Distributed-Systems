@@ -1,5 +1,5 @@
 -module(client).
--export([start/0]).
+-export([start/0,randomSendIntervall/1]).
 -import(werkzeug,[get_config_value/2, to_String/1,timeMilliSecond/0]).
 -import(utils,[log/3,randomInt/1]).
 
@@ -32,7 +32,7 @@ spawnClient(ClientNumber, LifeTime,
   ServerService, ClientConfig) ->
     spawn(
       fun() ->
-        timer:kill_after(LifeTime * 1000),
+        timer:kill_after(trunc(LifeTime * 1000)),
         Datei = createLogFile(ClientNumber),
         log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
         loop(ClientNumber, ServerService, ClientConfig, Datei) 

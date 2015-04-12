@@ -14,18 +14,21 @@ loop(ServerService, Nrs, ClientNumber, Datei) ->
 
   receive
     {reply,[Nr,Msg,_,_,_,_],Terminated} ->
-      % log: dropped message NR at 16.06 09:55:43,525| content
-      LogMsg = ["Received message ",Nr," at ",timeMilliSecond()," with ",Msg],
-      ByEditor = messageByEditor(Nr, Nrs),
-      log(Datei,editor, LogMsg ++ ByEditor),
 
       case Terminated of
-        false -> loop(ServerService, Nrs, ClientNumber, Datei);
-        true -> ok
+        false ->
+					% log: dropped message NR at 16.06 09:55:43,525| content
+					LogMsg = ["Received message ",Nr," at ",timeMilliSecond()," with ",Msg],
+					ByEditor = messageByEditor(Nr, Nrs),
+					log(Datei,reader, LogMsg ++ ByEditor),
+					loop(ServerService, Nrs, ClientNumber, Datei);
+        true ->
+					log(Datei,reader,["Terminated for Nr ",Nr]),
+					ok
       end;
 
     Any -> % Terminate
-      log(Datei,editor,["Unknown message: ", Any])
+      log(Datei,reader,["Unknown message: ", Any])
 
   end.
 

@@ -31,11 +31,11 @@ loop(Count, ServerService, Nrs,
   ServerService ! {self(), getmsgid},
 
   % Sendintervall after each id request
-  timer:sleep(SendIntervall*1000),
+  timer:sleep(trunc(SendIntervall*1000)),
 
   receive
     {nid, Nr} ->
-      Content = createText(),
+      Content = "Hello World", %createText(), % TODO: echte quotes einsetzen
       % log: dropped message NR at 16.06 09:55:43,525| content
       log(Datei,editor,["Dropped message ",Nr," at ",timeMilliSecond()," with ",Content]),
       ServerService ! {dropmessage, [Nr,Content,now()]},
