@@ -4,20 +4,8 @@
 -import(werkzeug, [get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
 -import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1, deliverMSG/4]).
 
-% lc([server,werkzeug,cmem,hbq,dlq]).
+% make:all().
 % HBQ = hbq:start().
-
-
-% H = hbq:testInit().
-testInit() ->
-  H = start(),
-  H ! {self(),{request,initHBQ}},receive X -> X end,
-  testSend(H,1),
-  H.
-  
-testSend(H,N) ->
-  H ! {self(),{request,pushHBQ,[N,"Hallo",now()]}}, receive X -> X end.
-
 
 
 start() ->
@@ -90,22 +78,28 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
   DLQ2 = closeGapIfTooBig(HBQ,DLQ,ExpNr),
   % 4. Korrekt geordnete Elemente von der HBQ in die DLQ weiterleiten.
   HBQ2 = [NewHQueue,HSize,HDatei],
+  
   flush2DLQ(HBQ2,DLQ2).
 
 toStringQueue([Queue|_]) -> to_String(lists:map(fun(X) -> hd(X) end,Queue)).
 
+logQueues(HBQ,DLQ,Datei) ->
+  log(Datei,hbq,[" HBQ: ",toStringQueue(HBQ)]),
+  log(Datei,dlq,[" DLQ: ",toStringQueue(DLQ)]).
+
 % flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
 flush2DLQ([[],_,Datei]=HBQ,DLQ) ->
   log(Datei,hbq,["hbq completely flushed into dlq"]),
-  log(Datei,hbq,[" == ",toStringQueue(HBQ)]),
-  log(Datei,dlq,[" == ",toStringQueue(DLQ)]),
+  logQueues(HBQ,DLQ,Datei),
   {HBQ, DLQ};
-flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) -> 
-  [HNr|_] = HH,
+flush2DLQ([[Entry|HTail],HSize,HDatei]=HBQ,DLQ) -> 
+  [HNr|_] = Entry,
   ExpNr = expectedNr(DLQ),
   case ExpNr == HNr of
     true -> 
-      NewDLQ = push2DLQ(DLQ,HH,HDatei),
+      TShbqout = now(),
+      Entry2 = Entry ++ [TShbqout],
+      NewDLQ = push2DLQ(DLQ,Entry2,HDatei),
       flush2DLQ([HTail,HSize,HDatei],NewDLQ);
     false -> {HBQ, DLQ}
   end.
@@ -134,7 +128,9 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
     true ->
       [[SmallestNrInHBQ|_]|_] = HQueue, % Lücke von ExpNr bis SmallestNrInHBQ
       FehlerMSG = fehlerNachricht(ExpNr,SmallestNrInHBQ,HDatei),
-      push2DLQ(DLQ,FehlerMSG,HDatei);
+      NewDLQ = push2DLQ(DLQ,FehlerMSG,HDatei),
+      logQueues(HBQ,NewDLQ,HDatei),
+      NewDLQ;
     false -> DLQ
   end,
   DLQ2.
@@ -142,13 +138,13 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
 % Fehlernachricht erzeugen:
 fehlerNachricht(ExpNr,SmallestNrInHBQ,Datei) -> 
   To = SmallestNrInHBQ - 1,
-  Msg = io_lib:format(
-    "Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ~p\n",
-    [ExpNr, To, timeMilliSecond()]),
+  Msg =
+    io_lib:format("Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ",[ExpNr, To])
+    ++ timeMilliSecond(),
   TS = now(),
   log(Datei,hbq,["Generated missing message from ",ExpNr," to ",To]),
-  % TSclientout, TShbqin, TShbqout
-  [{ExpNr, To}, Msg,TS,TS,TS].
+  % TSclientout, TShbqin
+  [{ExpNr, To}, Msg,TS,TS].
 
 % Terminierung der HBQ
 % HBQ ! {self(), {request,dellHBQ}}
