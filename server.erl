@@ -78,6 +78,7 @@ loop([LoopNr,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]) ->
           
         {Client, getmessages} ->
           ClientNr = cmem:getClientNNr(CMEM,Client),
+          log(Datei,server,["Client ",Client," should receive ",ClientNr]),
           HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
           receive
             {reply,SendNr} ->
@@ -108,8 +109,8 @@ loop([LoopNr,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]) ->
           end;
           
         {shutdown,_PrevActivity} ->
-          log(Datei,server,["Ignoring shutdown"]),% dont shut down yet
-          loop([LoopNr+1,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]);
+          % log(Datei,server,["Ignoring shutdown"]),% dont shut down yet
+          loop([LoopNr,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]);
 
         Any ->
           log(Datei,server,["Received unknown message: ",Any]),
