@@ -2,19 +2,13 @@
 -module(server).
 -import(werkzeug,[get_config_value/2,to_String/1]).
 -import(utils,[log/3]).
--export([start/0,client/1]).
+-export([start/0]).
 
 % lc([server,hbq,...])
 % make:all().
 % unregister(SERVERPID).
 % f().
-
-client(S) ->
-  S ! {self(), getmsgid},
-  receive
-    {nid,Nr} -> S ! {dropmessage,[Nr,"Hallo",now()]}
-  end,
-  0.
+% bash> rm -rf log/* && rm -rf *.beam && erl -make
 
 % Servername aus der Config holen, server started, registrieren.
 % start: IO PID
