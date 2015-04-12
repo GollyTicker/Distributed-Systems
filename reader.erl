@@ -13,8 +13,11 @@ loop(ServerService, Nrs, ClientNumber, Datei) ->
   ServerService ! {self(), getmessages},
 
   receive
-    {reply,[Nr,Msg,_,_,_,_],Terminated} ->
-
+    {reply,MsgL,Terminated} ->
+      
+      TSclientIn = now(),
+      [Nr,Msg|_] = MsgL ++ [TSclientIn],
+      
       case Terminated of
         false ->
 					% log: dropped message NR at 16.06 09:55:43,525| content
