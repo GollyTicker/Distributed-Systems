@@ -20,24 +20,23 @@ start() ->
   spawnClients(Clients, ServerService, ClientConfig).
 
 
-spawnClients(Clients, ServerService, ClientConfig) ->
+spawnClients(Clients, ServerService, {LifeTime, _}=ClientConfig) ->
   case Clients of
     0 -> ok;
     _ -> 
       spawn(
         fun() ->
           timer:kill_after(LifeTime * 1000),
-          loop(Clients, ServerService, ClientConfig) 
+          Datei = createLogFile(Clients),
+          log(Datei,editor,["Spawning client ", Clients, " for ", node()]),
+          loop(Clients, ServerService, ClientConfig, Datei) 
         end
       ),
       spawnClients(Clients-1, ServerService, ClientConfig)
   end.
 
 loop(ClientNumber, ServerService, 
-  {LifeTime, SendIntervall}) ->
-
-  Datei = createLogFile(ClientNumber),
-  log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
+  {LifeTime, SendIntervall}, Datei) ->
 
   Nrs = editor:execute(ServerService,
       {ClientNumber,SendIntervall}, 
@@ -47,7 +46,7 @@ loop(ClientNumber, ServerService,
 
   NewSendIntervall = randomSendIntervall(SendIntervall),
 
-  loop(ClientNumber, ServerService, {LifeTime, NewSendIntervall}).
+  loop(ClientNumber, ServerService, {LifeTime, NewSendIntervall},Datei).
 
 
 randomSendIntervall(SendIntervall) ->
