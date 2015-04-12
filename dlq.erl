@@ -30,13 +30,18 @@ push2DLQ([DQueue,Size,Datei],Entry,_) ->
   [DQueue2 ++ [Entry2],Size,Datei].
 
 % Ausliefern einer Nachricht an einen Leser-Client
+% deliverMSG: Nr -> PID -> DLQ -> Datei -> Nr
 deliverMSG(Nr,ClientPID,DLQ,Datei) -> 
   {Terminated, Msg} = smallestNrGt(DLQ, Nr),
   TSdlqout = now(),
   Msg2 = Msg ++ [TSdlqout],
   [SendNr|_] = Msg2,
   ClientPID ! {reply,Msg2,Terminated},
-  log(Datei,dlq,["Message ",SendNr," sent to client ", ClientPID]).
+  case Terminated of
+    true -> log(Datei,dlq,["Message <terminated> sent to client ", ClientPID]);
+    false -> log(Datei,dlq,["Message ",SendNr," sent to client ", ClientPID])
+  end,
+  SendNr.
 
 % smallestNrGt(DLQ,Nr) => {Terminated,[SendNr,Msg,TS1...TSn]}
 % Liefert die nächste höhere Nachricht nach Nr aus der DLQ zurück.
@@ -45,7 +50,7 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
 smallestNrGt([Queue,_,_], Nr) ->
   DroppedQueue = lists:dropwhile(
     fun(X) -> 
-      getNr(X) < Nr and realMsg(X) 
+      (getNr(X) < Nr) and realMsg(X)
     end, Queue),
   case DroppedQueue of
     [] ->

@@ -82,7 +82,6 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
         Entry) -> 
   TShbqin = now(),
   Entry2 = Entry ++ [TShbqin],
-  log(HDatei,hbq,["Should be Entry: ",Entry2]),
   % 1. in HBQ einfügen
   NewHQueue = sortedInsert(HQueue,Entry2,HDatei),
   % 2. expected nr holen
@@ -93,9 +92,13 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
   HBQ2 = [NewHQueue,HSize,HDatei],
   flush2DLQ(HBQ2,DLQ2).
 
+toStringQueue([Queue|_]) -> to_String(lists:map(fun(X) -> hd(X) end,Queue)).
+
 % flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
 flush2DLQ([[],_,Datei]=HBQ,DLQ) ->
   log(Datei,hbq,["hbq completely flushed into dlq"]),
+  log(Datei,hbq,[" == ",toStringQueue(HBQ)]),
+  log(Datei,dlq,[" == ",toStringQueue(DLQ)]),
   {HBQ, DLQ};
 flush2DLQ([[HH|HTail],HSize,HDatei]=HBQ,DLQ) -> 
   [HNr|_] = HH,
