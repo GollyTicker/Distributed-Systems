@@ -3,7 +3,6 @@
 -import(werkzeug,[to_String/1]).
 -import(utils,[log/3]).
 
-
 initDLQ(Size, Datei) -> 
   log(Datei,dlq,["initialized dlq"]),
   [[], Size, Datei].
@@ -13,7 +12,7 @@ initDLQ(Size, Datei) ->
 % [{Nr1, Nr2}, Msg, Ts1..Tsn]
 % [Nr, Msg, Ts1..Tsn]
 expectedNr([[],_,_]) -> 1;
-expectedNr([DQueue,_,_]) -> getNr(lists:last(DQueue)) + 1.
+expectedNr([DQueue,_,_]) -> getHigherNr(lists:last(DQueue)) + 1.
 
 % Speichern einer Nachricht in der DLQ
 % [NNr,Msg,TSclientout,TShbqin]
@@ -24,9 +23,10 @@ push2DLQ([DQueue,Size,Datei],Entry,_) ->
       tl(DQueue);
     _Smaller -> DQueue
   end,
+  
   TSdlqin = now(),
   Entry2 = Entry ++ [TSdlqin],
-  log(Datei,dlq,["Message ",getNr(Entry)," into dlq"]),
+  log(Datei,dlq,["Message ", getBothNr(Entry)," into dlq"]),
   [DQueue2 ++ [Entry2],Size,Datei].
 
 % Ausliefern einer Nachricht an einen Leser-Client
@@ -48,9 +48,9 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
 % Gibt es diese nicht, wird eine dummy Nachricht zurückgegeben und Terminated == true.
 % Fehlernachrichten werden nicht übertragen.
 smallestNrGt([Queue,_,_], Nr) ->
-  DroppedQueue = lists:dropwhile(
+  DroppedQueue = lists:filter(
     fun(X) -> 
-      (getNr(X) < Nr) and realMsg(X)
+      realMsg(X) and (hd(X) > Nr)
     end, Queue),
   case DroppedQueue of
     [] ->
@@ -63,7 +63,14 @@ smallestNrGt([Queue,_,_], Nr) ->
 realMsg([{_,_}|_]) -> false;
 realMsg(_) -> true.
 
-getNr(Entry) ->
+getBothNr(Entry) ->
+  case hd(Entry) of
+    {Nr1, Nr2} -> {Nr1, Nr2};
+    Nr -> Nr
+  end.
+
+
+getHigherNr(Entry) ->
   case hd(Entry) of
     {_, Nr2} -> Nr2;
     Nr -> Nr
