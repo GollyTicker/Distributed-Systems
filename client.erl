@@ -3,6 +3,7 @@
 -import(werkzeug,[get_config_value/2, to_String/1,timeMilliSecond/0]).
 -import(utils,[log/3,randomInt/1]).
 
+
 start() ->
   {ok, ConfigList} = file:consult("client.cfg"),
 
@@ -40,8 +41,7 @@ loop(ClientNumber, ServerService,
       {ClientNumber,SendIntervall}, 
       Datei),
   
-  % TODO!
-  reader:execute(Nrs),
+  reader:execute(ServerService, Nrs, ClientNumber, Datei),
 
   NewSendIntervall = randomSendIntervall(SendIntervall),
 
