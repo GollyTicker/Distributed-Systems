@@ -1,6 +1,6 @@
 -module(editor).
 -export([start/0]).
--import(werkzeug,[get_config_value/2, to_String/1]).
+-import(werkzeug,[get_config_value/2, to_String/1,timeMilliSecond/0]).
 -import(utils,[log/3]).
 
 
@@ -60,9 +60,15 @@ loop(LoopCount, ServerService,
     {nid, Nr} ->
       % new Send intervall after N = 5 messages and
       NewSendIntervall = case Rem5Message of
-        true -> randomSendIntervall(SendIntervall);
+        true -> 
+          % log: 121te_Nachricht um 16.06 09:55:43,525| vergessen zu senden
+          log(Datei,editor,["Message ",Nr," at ",timeMilliSecond()," Forgot to send"]),
+          randomSendIntervall(SendIntervall);
         false ->
-          ServerService ! {dropmessage, [Nr,createText(),now()]},
+          Content = createText(),
+          % log: dropped message NR at 16.06 09:55:43,525| content
+          log(Datei,editor,["Dropped message ",Nr," at ",timeMilliSecond()," with ",Content]),
+          ServerService ! {dropmessage, [Nr,Content,now()]},
           SendIntervall
       end;
     Any -> 
