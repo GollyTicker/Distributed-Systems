@@ -34,29 +34,76 @@ spawnClient(ClientNumber,
               spawn(
                 fun() -> 
                   Datei = createLogFile(ClientNumber),
+                  LoopCount = 1,
                   log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
-                  loop(ServerService, 
+                  loop(LoopCount, ServerService, 
                       {ClientNumber,LifeTime,SendIntervall}, 
                       Datei) 
                 end
               ).
 
-loop(ServerService, 
+loop(LoopCount, ServerService, 
     {ClientNumber, LifeTime, SendIntervall}, 
      Datei) -> 
+
+  % TODO: currently one can do 
+  %   id for message but it should be possible to have
+  %   several ids before dropping messages?
+  % a unique msgid request is sent after 5th message that does not get a "dropmessage"
   ServerService ! {self(), getmsgid},
+  % Sendintervall after each id request
+  timer:sleep(SendIntervall*1000),
+
+  % we start at index 1 not 0
+  Rem5Message = LoopCount rem (5 + 1) == 0,
   receive
     {nid, Nr} ->
-      ServerService ! {dropmessage, [Nr,createText(),now()]};
+      % new Send intervall after N = 5 messages and
+      NewSendIntervall = case Rem5Message of
+        true -> randomSendIntervall(SendIntervall);
+        false ->
+          ServerService ! {dropmessage, [Nr,createText(),now()]},
+          SendIntervall
+      end;
     Any -> 
+      NewSendIntervall = SendIntervall,
       log(Datei,editor,["Unknown message: ", Any])
+
+  % Should we use a timeout here?
+  after 5000 ->
+    NewSendIntervall = SendIntervall,
+    log(Datei,editor,["Timeout while waiting for a msgid"])
+
   end,
-  loop(ServerService, 
-      {ClientNumber, LifeTime, SendIntervall}, 
-       Datei),
 
-  log(Datei,editor,["Editor ",ClientNumber," was too controversial and eliminated!"]).
+  % TODO: Find out how lifetime is calculated
+  case timeExpired(LifeTime) of 
+    true -> 
+      log(Datei,editor, ["Editor ",ClientNumber," was successfully eliminated!"]);
+    false -> 
+      loop(LoopCount + 1, ServerService, 
+          {ClientNumber, LifeTime, NewSendIntervall}, 
+           Datei)
+  end.
 
+  % TODO: Change to client here
+
+
+% TODO: currently random, need to implement later
+timeExpired(LifeTime) ->
+  LifeTime < randomInt(LifeTime) + 10.
+
+randomSendIntervall(SendIntervall) ->
+  random:seed(erlang:now()),
+  OffSet = case random:uniform() < 0.5 of
+    true -> -SendIntervall;
+    _ -> SendIntervall
+  end * 0.5,
+  NewSendIntervall = SendIntervall + OffSet,
+  case NewSendIntervall > 2.0 of
+    true -> NewSendIntervall;
+    _ -> 2.0
+  end.
 
 createLogFile(ClientNumber) ->
   Base = "log/Client_" ++ to_String(ClientNumber),
@@ -88,7 +135,8 @@ createText() ->
     "If someone betrays you once, its his fault. If he betrays you twice, its your fault ",
     "God Gives every bird its food, But he does not throw it into its nest "
   ],
+  lists:nth(randomInt(length(Quotes)), Quotes).
+
+randomInt(Num) ->
   random:seed(erlang:now()),
-  lists:nth(random:uniform(length(Quotes)), Quotes).
-
-
+  random:uniform(Num).
