@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3]).
+-export([log/3,randomInt/1]).
 
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
@@ -16,4 +16,6 @@ log(Datei,Module,List) ->
   logging(Datei,Str).
 
 
-
+randomInt(Num) ->
+  random:seed(erlang:now()),
+  random:uniform(Num).

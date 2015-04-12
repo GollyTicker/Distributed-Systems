@@ -1,121 +1,50 @@
 -module(editor).
--export([start/0]).
--import(werkzeug,[get_config_value/2, to_String/1,timeMilliSecond/0]).
--import(utils,[log/3]).
+-export([execute/3]).
+-import(werkzeug,[timeMilliSecond/0]).
+-import(utils,[log/3,randomInt/1]).
 
 
-start() ->
-  {ok, ConfigList} = file:consult("client.cfg"),
+execute(ServerService, 
+  {ClientNumber, SendIntervall}, Datei) ->
 
-  {ok, LifeTime} = get_config_value(lifetime, ConfigList),
-  {ok, SendIntervall} = get_config_value(sendeintervall, ConfigList),
-  ClientConfig = {LifeTime, SendIntervall},
+  Nrs = loop(5, ServerService, [],
+    {ClientNumber, SendIntervall}, 
+     Datei),
 
-  {ok, ServerName} = get_config_value(servername, ConfigList),
-  {ok, ServerNode} = get_config_value(servernode, ConfigList),
-  ServerService = {ServerName,ServerNode},
+  % unique id without any response
+  ServerService ! {self(), getmsgid},
 
-  {ok, Clients} = get_config_value(clients, ConfigList),
+  % log if the requested id was received
+  receive
+    {nid, Nr} -> 
+      log(Datei,editor,["Message ",Nr," at ",timeMilliSecond()," Forgot to send"])
+  end,
 
-  spawnClients(Clients, ServerService, ClientConfig).
+  Nrs.
 
 
-spawnClients(N, ServerService, ClientConfig) -> 
-  case N of
-    0 -> ok;
-    _ -> 
-      spawnClient(N, ServerService, ClientConfig),
-      spawnClients(N-1, ServerService, ClientConfig)
-  end.
-
-spawnClient(ClientNumber, 
-            ServerService, 
-            {LifeTime, SendIntervall}) ->
-              spawn(
-                fun() -> 
-                  Datei = createLogFile(ClientNumber),
-                  LoopCount = 1,
-                  log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
-                  loop(LoopCount, ServerService, 
-                      {ClientNumber,LifeTime,SendIntervall}, 
-                      Datei) 
-                end
-              ).
-
-loop(LoopCount, ServerService, 
-    {ClientNumber, LifeTime, SendIntervall}, 
+loop(0,_,Nrs,_,_) -> Nrs;
+loop(Count, ServerService, Nrs,
+    {ClientNumber, SendIntervall}, 
      Datei) -> 
 
-  % TODO: currently one can do 
-  %   id for message but it should be possible to have
-  %   several ids before dropping messages?
-  % a unique msgid request is sent after 5th message that does not get a "dropmessage"
   ServerService ! {self(), getmsgid},
+
   % Sendintervall after each id request
   timer:sleep(SendIntervall*1000),
 
-  % we start at index 1 not 0
-  Rem5Message = LoopCount rem (5 + 1) == 0,
   receive
     {nid, Nr} ->
-      % new Send intervall after N = 5 messages and
-      NewSendIntervall = case Rem5Message of
-        true -> 
-          % log: 121te_Nachricht um 16.06 09:55:43,525| vergessen zu senden
-          log(Datei,editor,["Message ",Nr," at ",timeMilliSecond()," Forgot to send"]),
-          randomSendIntervall(SendIntervall);
-        false ->
-          Content = createText(),
-          % log: dropped message NR at 16.06 09:55:43,525| content
-          log(Datei,editor,["Dropped message ",Nr," at ",timeMilliSecond()," with ",Content]),
-          ServerService ! {dropmessage, [Nr,Content,now()]},
-          SendIntervall
-      end;
-    Any -> 
-      NewSendIntervall = SendIntervall,
+      Content = createText(),
+      % log: dropped message NR at 16.06 09:55:43,525| content
+      log(Datei,editor,["Dropped message ",Nr," at ",timeMilliSecond()," with ",Content]),
+      ServerService ! {dropmessage, [Nr,Content,now()]},
+      loop(Count - 1, ServerService, [Nr|Nrs],
+          {ClientNumber, SendIntervall}, Datei);
+
+    Any -> % terminate...
       log(Datei,editor,["Unknown message: ", Any])
-
-  % Should we use a timeout here?
-  after 5000 ->
-    NewSendIntervall = SendIntervall,
-    log(Datei,editor,["Timeout while waiting for a msgid"])
-
-  end,
-
-  % TODO: Find out how lifetime is calculated
-  case timeExpired(LifeTime) of 
-    true -> 
-      log(Datei,editor, ["Editor ",ClientNumber," was successfully eliminated!"]);
-    false -> 
-      loop(LoopCount + 1, ServerService, 
-          {ClientNumber, LifeTime, NewSendIntervall}, 
-           Datei)
   end.
-
-  % TODO: Change to client here
-
-
-% TODO: currently random, need to implement later
-timeExpired(LifeTime) ->
-  LifeTime < randomInt(LifeTime) + 10.
-
-randomSendIntervall(SendIntervall) ->
-  random:seed(erlang:now()),
-  OffSet = case random:uniform() < 0.5 of
-    true -> -SendIntervall;
-    _ -> SendIntervall
-  end * 0.5,
-  NewSendIntervall = SendIntervall + OffSet,
-  case NewSendIntervall > 2.0 of
-    true -> NewSendIntervall;
-    _ -> 2.0
-  end.
-
-createLogFile(ClientNumber) ->
-  Base = "log/Client_" ++ to_String(ClientNumber),
-  NodeName = to_String(node()),
-  End = "@KI-VS.log",
-  list_to_atom(Base ++ NodeName ++ End).
 
 % Text Helper...
 createText() ->
@@ -142,7 +71,3 @@ createText() ->
     "God Gives every bird its food, But he does not throw it into its nest "
   ],
   lists:nth(randomInt(length(Quotes)), Quotes).
-
-randomInt(Num) ->
-  random:seed(erlang:now()),
-  random:uniform(Num).
