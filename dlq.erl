@@ -12,7 +12,7 @@ initDLQ(Size, Datei) ->
 % [{Nr1, Nr2}, Msg, Ts1..Tsn]
 % [Nr, Msg, Ts1..Tsn]
 expectedNr([[],_,_]) -> 1;
-expectedNr([DQueue,_,_]) -> getHigherNr(lists:last(DQueue)) + 1.
+expectedNr([DQueue,_,_]) -> getNr(lists:last(DQueue)) + 1.
 
 % Speichern einer Nachricht in der DLQ
 % [NNr,Msg,TSclientout,TShbqin]
@@ -50,7 +50,7 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
 smallestNrGt([Queue,_,_], Nr) ->
   DroppedQueue = lists:filter(
     fun(X) -> 
-      realMsg(X) and (hd(X) > Nr)
+      realMsg(X) and (getNr(X) > Nr)
     end, Queue),
   case DroppedQueue of
     [] ->
@@ -63,14 +63,9 @@ smallestNrGt([Queue,_,_], Nr) ->
 realMsg([{_,_}|_]) -> false;
 realMsg(_) -> true.
 
-getBothNr(Entry) ->
-  case hd(Entry) of
-    {Nr1, Nr2} -> {Nr1, Nr2};
-    Nr -> Nr
-  end.
+getBothNr(Entry) -> hd(Entry).
 
-
-getHigherNr(Entry) ->
+getNr(Entry) ->
   case hd(Entry) of
     {_, Nr2} -> Nr2;
     Nr -> Nr
