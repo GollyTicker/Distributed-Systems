@@ -1,27 +1,25 @@
 
 HOW TO - Build and Run:
 
-
-
 erl is an abbrevation for (w)erl.
 
-Build all files from an opened erl console with
+1. Build all files from an opened erl console with
 
-erl> make:all().
+  erl> make:all().
 
-Run each command in a separate shell.
-First run the hbq
+2. Run each command in a separate shell.
+  2.1. Start the hbq node
 
-shell> erl -sname hbqNode@localhost -run hbq start
+    shell> erl -sname hbqNode@localhost
 
-Second run the server
+  2.2. Run the server
 
-shell> erl -sname serverNode@localhost -run server start
+    shell> erl -sname server@localhost -run server start
 
-Third run the client
+  2.3. Run the client
 
-shell> erl -sname client -run client start
+    shell> erl -sname client -run client start
 
-If the servers shutdown is too fast set the latency (given in seconds) in your server.cfg to a reasonable time.
+3. If the servers shutdown is too fast set the latency (given in seconds) in your server.cfg to a reasonable time.
 
-To shutdown the nodes, simply terminate the three shells.
+4. To shutdown the nodes, simply terminate the three shells.

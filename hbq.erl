@@ -1,5 +1,5 @@
 -module(hbq).
--export([start/0]).
+-export([startHBQ/0]).
 -import(utils,[log/3]).
 -import(werkzeug, [get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
 -import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1, deliverMSG/4]).
@@ -8,14 +8,13 @@
 % HBQ = hbq:start().
 
 
-start() ->
+startHBQ() ->
   {ok, ConfigList} = file:consult("server.cfg"),
   {ok, HbqName} = get_config_value(hbqname, ConfigList),
   Datei = list_to_atom("log/HB-DLQ@" ++ atom_to_list(node()) ++ ".log"),
-  PID = spawn(fun() -> loop([a,b,Datei],ConfigList) end),
-  register(HbqName, PID),
+  register(HbqName, self()),
   log(Datei,hbq,["Registered as ",HbqName," on ",node()]),
-  PID.
+  loop([a,b,Datei],ConfigList).
 
 loop([HBQ, DLQ, Datei], ConfigList) ->
   receive

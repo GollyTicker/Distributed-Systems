@@ -35,9 +35,11 @@ initServer(ConfigList,Datei) ->
   {ok, Latency} = get_config_value(latency,ConfigList),
 
   {ok, HBQnode} = get_config_value(hbqnode,ConfigList),
-  {ok, HBQname} = get_config_value(hbqname,ConfigList),
-  HBQservice = {HBQname,HBQnode},
+  {ok, _HBQname} = get_config_value(hbqname,ConfigList),
+  % HBQservice = {_HBQname,HBQnode},
   
+  HBQservice = spawn(HBQnode,fun() -> hbq:startHBQ() end),
+
   log(Datei, server,["Initializing hbq - Address: ",HBQservice]),
   HBQservice ! {self(), {request,initHBQ}},
   receive
