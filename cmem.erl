@@ -23,7 +23,7 @@ updateClient(CMEM,ClientID,SendNr,Datei) ->
   Elem = {ClientID,NextNr,erlang:now()},
   case getClient(ClientID,CMEM2) of
     false -> log(Datei,cmem,["Added new Client ",ClientID]);
-    _ -> log(Datei,cmem,["Updated Client ",ClientID," to ",NextNr])
+    _ -> log(Datei,cmem,["Updated Client ",ClientID," to #",NextNr])
   end,
   Map2 = lists:keystore(ClientID,1,Map,Elem),
   [Map2,Rem,CDatei].

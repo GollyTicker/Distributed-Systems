@@ -7,9 +7,11 @@
 start() ->
   {ok, ConfigList} = file:consult("client.cfg"),
 
+  TeamName = getTeamName(ConfigList),
+
   {ok, LifeTime} = get_config_value(lifetime, ConfigList),
   {ok, SendIntervall} = get_config_value(sendeintervall, ConfigList),
-  ClientConfig = {LifeTime, SendIntervall},
+  ClientConfig = {TeamName, LifeTime, SendIntervall},
 
   {ok, ServerName} = get_config_value(servername, ConfigList),
   {ok, ServerNode} = get_config_value(servernode, ConfigList),
@@ -20,16 +22,15 @@ start() ->
   spawnClients(Clients, ServerService, ClientConfig).
 
 
-spawnClients(Clients, ServerService, {LifeTime, _}=ClientConfig) ->
+spawnClients(Clients, ServerService, ClientConfig) ->
   case Clients of
     0 -> ok;
     _ -> 
-      spawnClient(Clients, LifeTime, ServerService, ClientConfig),
+      spawnClient(Clients, ServerService, ClientConfig),
       spawnClients(Clients-1, ServerService, ClientConfig)
   end.
 
-spawnClient(ClientNumber, LifeTime,
-  ServerService, ClientConfig) ->
+spawnClient(ClientNumber, ServerService, {_,LifeTime,_}=ClientConfig) ->
     spawn(
       fun() ->
         timer:kill_after(trunc(LifeTime * 1000)),
@@ -39,18 +40,16 @@ spawnClient(ClientNumber, LifeTime,
       end
     ).
 
-loop(ClientNumber, ServerService, 
-  {LifeTime, SendIntervall}, Datei) ->
+loop(ClientNumber, ServerService,
+  {TeamName, LifeTime, SendIntervall}, Datei) ->
 
-  Nrs = editor:execute(ServerService,
-      {ClientNumber,SendIntervall}, 
-      Datei),
+  Nrs = editor:execute(ServerService, {TeamName,SendIntervall}, Datei),
   
   reader:execute(ServerService, Nrs, ClientNumber, Datei),
 
   NewSendIntervall = randomSendIntervall(SendIntervall),
 
-  loop(ClientNumber, ServerService, {LifeTime, NewSendIntervall},Datei).
+  loop(ClientNumber, ServerService, {TeamName, LifeTime, NewSendIntervall}, Datei).
 
 
 randomSendIntervall(SendIntervall) ->
@@ -70,4 +69,10 @@ createLogFile(ClientNumber) ->
   NodeName = to_String(node()),
   End = "@KI-VS.log",
   list_to_atom(Base ++ NodeName ++ End).
+
+getTeamName(ConfigList) ->
+  {ok, Lab} = get_config_value(lab, ConfigList),
+  {ok, Group} = get_config_value(group, ConfigList),
+  {ok, Team} = get_config_value(team, ConfigList),
+  (Lab ++ Group ++ Team).
 

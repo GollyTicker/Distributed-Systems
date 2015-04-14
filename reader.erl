@@ -20,13 +20,12 @@ loop(ServerService, Nrs, ClientNumber, Datei) ->
       
       case Terminated of
         false ->
-					% log: dropped message NR at 16.06 09:55:43,525| content
-					LogMsg = ["Received message ",Nr," at ",timeMilliSecond()," with ",Msg],
+					LogMsg = ["Received #",Nr," at ",timeMilliSecond(),"| ",Msg],
 					ByEditor = messageByEditor(Nr, Nrs),
 					log(Datei,reader, LogMsg ++ ByEditor),
 					loop(ServerService, Nrs, ClientNumber, Datei);
         true ->
-					log(Datei,reader,["Terminated for Nr ",Nr]),
+					log(Datei,reader,["Terminated for #",Nr]),
 					ok
       end;
 

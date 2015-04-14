@@ -26,7 +26,7 @@ push2DLQ([DQueue,Size,Datei],Entry,_) ->
   
   TSdlqin = now(),
   Entry2 = Entry ++ [TSdlqin],
-  log(Datei,dlq,["Message ", getBothNr(Entry)," into dlq"]),
+  log(Datei,dlq,["#", getBothNr(Entry)," into dlq"]),
   [DQueue2 ++ [Entry2],Size,Datei].
 
 % Ausliefern einer Nachricht an einen Leser-Client
@@ -38,8 +38,8 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
   [SendNr|_] = Msg2,
   ClientPID ! {reply,Msg2,Terminated},
   case Terminated of
-    true -> log(Datei,dlq,["Message <terminated> sent to client ", ClientPID]);
-    false -> log(Datei,dlq,["Message ",SendNr," sent to client ", ClientPID])
+    true -> log(Datei,dlq,["<terminated> sent to client ", ClientPID]);
+    false -> log(Datei,dlq,["#",SendNr," sent to client ", ClientPID])
   end,
   SendNr.
 

@@ -43,7 +43,8 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
           Server ! {reply, HBQDead};
 
         Any -> 
-          log(Datei,hbq,["Received unknown message: ",Any])
+          log(Datei,hbq,["Received unknown message: ",Any]),
+          loop([HBQ, DLQ, Datei],ConfigList)
 
       end
   end.
@@ -109,7 +110,7 @@ sortedInsert(HQueue, [NNr|_] = Entry,Datei) ->
   CMP = fun([NNr2|_]) -> NNr >= NNr2 end,
   Heads = lists:takewhile(CMP, HQueue),
   Tails = lists:dropwhile(CMP, HQueue),
-  log(Datei,hbq,["Message ",NNr," into hbq"]),
+  log(Datei,hbq,["#",NNr," into hbq"]),
   Heads ++ [Entry|Tails].
 
 % Schreibt eine Fehlernachricht in die DLQ falls die HBQ zu groß ist.
@@ -139,10 +140,10 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
 fehlerNachricht(ExpNr,SmallestNrInHBQ,Datei) -> 
   To = SmallestNrInHBQ - 1,
   Msg =
-    io_lib:format("Fehlernachricht fuer Nachrichtennummern ~p bis ~p um ",[ExpNr, To])
+    io_lib:format("Missing Message for Msg #~p bis #~p um ",[ExpNr, To])
     ++ timeMilliSecond(),
   TS = now(),
-  log(Datei,hbq,["Generated missing message from ",ExpNr," to ",To]),
+  log(Datei,hbq,["Generated missing message from #",ExpNr," to #",To]),
   % TSclientout, TShbqin
   [{ExpNr, To}, Msg,TS,TS].
 

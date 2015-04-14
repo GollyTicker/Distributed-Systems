@@ -32,7 +32,6 @@ initServer(ConfigList,Datei) ->
   {ok, RemTime} = get_config_value(clientlifetime, ConfigList),
   CMEM = cmem:initCMEM(RemTime,Datei),
   
-  
   {ok, Latency} = get_config_value(latency,ConfigList),
 
   {ok, HBQnode} = get_config_value(hbqnode,ConfigList),
@@ -45,77 +44,58 @@ initServer(ConfigList,Datei) ->
     {reply, ok} -> log(Datei,server,["Received ok from hbq"])
   end,
   
-  LatestActivity = now(),
-  
-  start_timer(Latency,LatestActivity),
-  
   log(Datei,server,["Initialized Server"]),
-  State = [0,1, CMEM, HBQservice, LatestActivity, Latency, ConfigList, Datei],
+  State = [0,1, CMEM, HBQservice, Latency, ConfigList, Datei],
   State.
 
-start_timer(Latency,Now) -> timer:send_after(Latency*1000,{shutdown,Now}).
-
 % loop: State -> Nothing
-loop([LoopNr,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]) ->
+loop([LoopNr,Nr,CMEM, HBQ, Latency, ConfigList, Datei]) ->
   log(Datei,server,["======= ",LoopNr," ======="]),
   receive
-    Any ->
-      log(Datei,server,["Received: ",Any]),
-      case Any of 
-      
-        {Redakteur, getmsgid}  ->
-          Redakteur ! {nid, Nr},
-          log(Datei,server,["MsgNr ",Nr," to editor ",Redakteur]),
-          Now = now(),
-          start_timer(Latency,Now),
-          loop([LoopNr+1,Nr+1,CMEM, HBQ, Now, Latency, ConfigList, Datei]);
-          
-        {Client, getmessages} ->
-          ClientNr = cmem:getClientNNr(CMEM,Client),
-          log(Datei,server,["Client ",Client," should receive ",ClientNr]),
-          HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
-          receive
-            {reply,SendNr} ->
-              CMEM2 = cmem:updateClient(CMEM,Client,SendNr,Datei),
-              Now = now(),
-              start_timer(Latency,Now),
-              loop([LoopNr+1,Nr,CMEM2, HBQ, Now, Latency, ConfigList, Datei])
-          end;
-        
-        {dropmessage, [NNr,Msg,TSclientout]} -> 
-          HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
-          receive {reply, ok} ->
-            log(Datei,server,["Inserted ",NNr," into hbq"]),
-            Now = now(),
-            start_timer(Latency,Now),
-            loop([LoopNr+1,Nr,CMEM, HBQ, Now, Latency, ConfigList, Datei]) 
-          end;
-          
-        {shutdown,LatestActivity} -> % matching mit der letzten Aktivität
-          HBQ ! {self(),{request,dellHBQ}},
-          receive 
-            {reply, HBQDead} -> HBQDead
-          end,
-          {ok, ServerName} = get_config_value(servername, ConfigList),
-          case unregister(ServerName) of
-            true -> log(Datei,server,["Shutdown Server ",now()]), ok;
-            _ -> nok
-          end;
-          
-        {shutdown,_PrevActivity} ->
-          % log(Datei,server,["Ignoring shutdown"]),% dont shut down yet
-          loop([LoopNr,Nr,CMEM, HBQ, LatestActivity, Latency, ConfigList, Datei]);
 
-        Any ->
-          log(Datei,server,["Received unknown message: ",Any]),
-          Now = now(),
-          start_timer(Latency,Now),
-          loop([LoopNr+1,Nr,CMEM, HBQ, Now, Latency, ConfigList, Datei])
-          
-      end
+    {Redakteur, getmsgid}  ->
+      Redakteur ! {nid, Nr},
+      log(Datei,server,["#",Nr," to editor ",Redakteur]),
+      loop([LoopNr+1,Nr+1,CMEM, HBQ, Latency, ConfigList, Datei]);
+      
+    {Client, getmessages} ->
+      ClientNr = cmem:getClientNNr(CMEM,Client),
+      log(Datei,server,["Client ",Client," should receive ",ClientNr]),
+      HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
+      receive
+        {reply,SendNr} ->
+          CMEM2 = cmem:updateClient(CMEM,Client,SendNr,Datei),
+          loop([LoopNr+1,Nr,CMEM2, HBQ, Latency, ConfigList, Datei])
+      end;
+    
+    {dropmessage, [NNr,Msg,TSclientout]} -> 
+      HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
+      receive {reply, ok} ->
+        log(Datei,server,["Inserted #",NNr," into hbq"]),
+        loop([LoopNr+1,Nr,CMEM, HBQ, Latency, ConfigList, Datei]) 
+      end;
+
+    Any ->
+      log(Datei,server,["Received unknown message: ",Any]),
+      loop([LoopNr+1,Nr,CMEM, HBQ, Latency, ConfigList, Datei])
+
+  after Latency * 1000 -> 
+      shutdown(HBQ, ConfigList, Datei)
+  
   end
   .
 
+
+shutdown(HBQ, ConfigList, Datei)->
+  HBQ ! {self(),{request,dellHBQ}},
+  receive 
+    {reply, HBQDead} -> HBQDead
+  end,
+  {ok, ServerName} = get_config_value(servername, ConfigList),
+  case unregister(ServerName) of
+    true -> log(Datei,server,["Shutdown Server ",now()]), ok;
+    _ -> nok
+  end.
 
 
 

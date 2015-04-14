@@ -1,15 +1,12 @@
 -module(editor).
 -export([execute/3]).
--import(werkzeug,[timeMilliSecond/0]).
+-import(werkzeug,[timeMilliSecond/0,to_String/1]).
 -import(utils,[log/3,randomInt/1]).
 
 
-execute(ServerService, 
-  {ClientNumber, SendIntervall}, Datei) ->
+execute(ServerService, Config, Datei) ->
 
-  Nrs = loop(5, ServerService, [],
-    {ClientNumber, SendIntervall}, 
-     Datei),
+  Nrs = loop(5, ServerService, [], Config, Datei),
 
   % unique id without any response
   ServerService ! {self(), getmsgid},
@@ -17,7 +14,7 @@ execute(ServerService,
   % log if the requested id was received
   receive
     {nid, Nr} -> 
-      log(Datei,editor,["Message ",Nr," at ",timeMilliSecond()," Forgot to send"])
+      log(Datei,editor,["#",Nr," at ",timeMilliSecond()," Forgot to send"])
   end,
 
   Nrs.
@@ -25,7 +22,7 @@ execute(ServerService,
 
 loop(0,_,Nrs,_,_) -> Nrs;
 loop(Count, ServerService, Nrs,
-    {ClientNumber, SendIntervall}, 
+    {TeamName, SendIntervall}, 
      Datei) -> 
 
   ServerService ! {self(), getmsgid},
@@ -35,19 +32,20 @@ loop(Count, ServerService, Nrs,
 
   receive
     {nid, Nr} ->
-      Content = createText(),
+      SendTime = timeMilliSecond(),
+      Content = createText(TeamName, Nr, SendTime),
       % log: dropped message NR at 16.06 09:55:43,525| content
-      log(Datei,editor,["Dropped message ",Nr," at ",timeMilliSecond()," with ",Content]),
+      log(Datei,editor,["Dropped ", Content]),
       ServerService ! {dropmessage, [Nr,Content,now()]},
       loop(Count - 1, ServerService, [Nr|Nrs],
-          {ClientNumber, SendIntervall}, Datei);
+          {TeamName, SendIntervall}, Datei);
 
     Any -> % terminate...
       log(Datei,editor,["Unknown message: ", Any])
   end.
 
 % TODO: Hello world for Quotes
-createText() ->
+createText(TeamName, Nr, SendTime) ->
   Quotes = [
     "People are just about as happy as they make up their minds to be - Abraham Lincoln ",
     "Everyone has problems, some are just better at hiding them - Unknown ",
@@ -71,4 +69,4 @@ createText() ->
     "God Gives every bird its food, But he does not throw it into its nest "
   ],
   lists:nth(randomInt(length(Quotes)), Quotes),
-  "Hello World".
+  "#" ++ to_String(Nr) ++ " "++ TeamName ++ " |"++ SendTime ++ " Hello World".
