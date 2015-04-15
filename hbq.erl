@@ -67,21 +67,25 @@ initHBQ(Datei, ConfigList, Server) ->
 
 % Speichern einer Nachricht in der HBQ
 % pushHBQ: HBQ -> DLQ -> {HBQ,DLQ}
-pushHBQ([HQueue,HSize,HDatei] = HBQ,
-        DLQ,
-        Entry) -> 
+pushHBQ([_,_,Datei]=HBQ, DLQ, Entry) -> 
   TShbqin = now(),
-  Entry2 = Entry ++ [TShbqin],
-  % 1. in HBQ einfügen
-  NewHQueue = sortedInsert(HQueue,Entry2,HDatei),
-  % 2. expected nr holen
+  [Nr|_] = Entry2 = Entry ++ [TShbqin],
+
+  % 1. expected nr holen
   ExpNr = expectedNr(DLQ),
+
+  % 2. in HBQ einfügen, falls die Nachricht veraltet ist
+  HBQ2 = case (not (Nr < ExpNr)) of
+    true -> sortedInsert(HBQ,Entry2,Datei);
+    false -> HBQ
+  end,
+
   % 3. Lücke schließen, falls die HBQ zu groß ist
-  DLQ2 = closeGapIfTooBig(HBQ,DLQ,ExpNr),
-  % 4. Korrekt geordnete Elemente von der HBQ in die DLQ weiterleiten.
-  HBQ2 = [NewHQueue,HSize,HDatei],
-  
+  DLQ2 = closeGapIfTooBig(HBQ2,DLQ,ExpNr),
+
+  % 4. Korrekt geordnete Elemente von der HBQ in die DLQ weiterleiten.  
   flush2DLQ(HBQ2,DLQ2).
+
 
 % flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
 flush2DLQ([[],_,Datei]=HBQ,DLQ) ->
@@ -98,13 +102,14 @@ flush2DLQ([[Entry|HTail],HSize,HDatei]=HBQ,DLQ) ->
     false -> {HBQ, DLQ}
   end.
 
-% sortedInsert: HQueue -> Entry -> Datei -> HQueue
-sortedInsert(HQueue, [NNr|_] = Entry,Datei) -> 
+% sortedInsert: HBQ -> Entry -> Datei -> HBQ
+sortedInsert([HQueue,HS,HD], [NNr|_] = Entry,Datei) -> 
   CMP = fun([NNr2|_]) -> NNr >= NNr2 end,
   Heads = lists:takewhile(CMP, HQueue),
   Tails = lists:dropwhile(CMP, HQueue),
   log(Datei,hbq,["#",NNr," into hbq"]),
-  Heads ++ [Entry|Tails].
+  HQueue2 = Heads ++ [Entry|Tails],
+  [HQueue2,HS,HD].
 
 % Schreibt eine Fehlernachricht in die DLQ falls die HBQ zu groß ist.
 % closeGapIfTooBig: HBQ -> DLQ -> Int -> DLQ
@@ -112,7 +117,7 @@ closeGapIfTooBig(HBQ,DLQ,ExpNr) ->
   [HQueue,HSize,HDatei] = HBQ,
   % 2. Falls HBQ zu groß und eine Lücke vorne
   GapAtBeginning = case HQueue of
-    [[Nr2|_]|_] -> ExpNr + 1 /= Nr2;
+    [[Nr2|_]|_] -> ExpNr < Nr2;
     _ -> false
   end,
   TooBig = length(HQueue) > HSize,

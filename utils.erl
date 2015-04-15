@@ -5,7 +5,7 @@
 
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
-debugMode() -> false.
+debugMode() -> true.
 
 % Aufruf:
 % log(0,hbq,["Hallo ",self()," ",[1,2]]).
