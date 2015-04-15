@@ -5,6 +5,8 @@
 
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
+debugMode() -> false.
+
 % Aufruf:
 % log(0,hbq,["Hallo ",self()," ",[1,2]]).
 log(Datei,Module,List) -> 
@@ -15,7 +17,10 @@ log(Datei,Module,List) ->
     end
   end,
   Str = to_String(Module) ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
-  logging(Datei,Str).
+  case debugMode() of
+    true -> logging(Datei,Str);
+    false -> ok %io:format(Str)
+  end.
 
 
 randomInt(Num) ->
