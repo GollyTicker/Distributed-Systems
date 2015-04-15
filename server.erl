@@ -1,6 +1,6 @@
 
 -module(server).
--import(werkzeug,[get_config_value/2,to_String/1]).
+-import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
 -import(utils,[log/3]).
 -export([start/0]).
 
@@ -95,7 +95,7 @@ shutdown(HBQ, ConfigList, Datei)->
   end,
   {ok, ServerName} = get_config_value(servername, ConfigList),
   case unregister(ServerName) of
-    true -> log(Datei,server,["Shutdown Server ",now()]), ok;
+    true -> log(Datei,server,["Shutdown Server at ",timeMilliSecond()]), ok;
     _ -> nok
   end.
 

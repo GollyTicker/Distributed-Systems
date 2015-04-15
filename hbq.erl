@@ -151,11 +151,11 @@ fehlerNachricht(ExpNr,SmallestNrInHBQ,Datei) ->
 % receive {reply, ok} 
 dellHBQ(ConfigList,Datei) ->
   {ok, HbqName} = get_config_value(hbqname, ConfigList),
-  case unregister(HbqName) of
+  Success = case unregister(HbqName) of
     true -> ok;
     _ -> nok
   end,
-  log(Datei,hbq,["Shutdown hbq and dlq"]).
+  log(Datei,hbq,["Shutdown hbq and dlq: ",Success]).
 
 
 
