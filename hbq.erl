@@ -97,9 +97,7 @@ flush2DLQ([[Entry|HTail],HSize,HDatei]=HBQ,DLQ) ->
   ExpNr = expectedNr(DLQ),
   case ExpNr == HNr of
     true -> 
-      TShbqout = now(),
-      Entry2 = Entry ++ [TShbqout],
-      NewDLQ = push2DLQ(DLQ,Entry2,HDatei),
+      NewDLQ = push2DLQ(DLQ,Entry,HDatei),
       flush2DLQ([HTail,HSize,HDatei],NewDLQ);
     false -> {HBQ, DLQ}
   end.

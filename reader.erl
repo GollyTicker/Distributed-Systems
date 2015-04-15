@@ -13,11 +13,11 @@ loop(ServerService, Nrs, ClientNumber, Datei) ->
   ServerService ! {self(), getmessages},
 
   receive
-    {reply,MsgL,Terminated} ->
+    {reply,[Nr,Msg,_TSclientout,_TShbqin,_TShbqout,_TSdlqout]=MsgL,Terminated} ->
       
       TSclientIn = now(),
-      [Nr,Msg|_] = MsgL ++ [TSclientIn],
-      
+      _NeueMessage = MsgL ++ [TSclientIn],
+
       case Terminated of
         false ->
 					LogMsg = ["Received #",Nr," at ",timeMilliSecond(),"| ",Msg],
@@ -38,7 +38,7 @@ loop(ServerService, Nrs, ClientNumber, Datei) ->
 messageByEditor(Nr,Nrs) ->
   [case lists:member(Nr, Nrs) of
     true -> 
-      "was sent by my editor";
+      " || was sent by my editor";
     false -> ""
   end].
 
