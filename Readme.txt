@@ -27,7 +27,7 @@ bash> erl -name server -setcookie hallo -run server start
 % {clientlifetime,4}.                               Zeitspanne, in der sich an den Client erinnert wird
 % {servername, wk}.                                 Name des Servers als Atom
 % {hbqname, hbq}.                                   Name der HBQ als Atom
-% {hbqnode, 'hbqNode@lab24.cpt.haw-hamburg.de'}.    Name der Node der HBQ als Atom
+% {hbqnode, 'hbqNode@KI-VS'}.    Name der Node der HBQ als Atom
 % {dlqlimit, 42}.                                   Größe der DLQ
 
 Starten des Clients:
@@ -40,7 +40,7 @@ bash> erl -name client -setcookie hallo -run client start
 % {clients, 5}.                                     Anzahl der Clients, die gestartet werden sollen
 % {lifetime, 42}.                                   Laufzeit der Clients
 % {servername, wk}.                                 Name des Servers
-% {servernode, 'server@lab24.cpt.haw-hamburg.de'}.  Node des Servers
+% {servernode, 'server@KI-VS'}.  Node des Servers
 % {sendeintervall, 3}.                              Zeitabstand der einzelnen Nachrichten
 % {lab, "lab24"}.                                   Name des Rechners auf dem wir sind (wird zum erstellen der Textzeilen verwendet)
 % {group, "1"}.                                     Unsere Praktikumsgruppe (wird zum erstellen der Textzeilen verwendet)
