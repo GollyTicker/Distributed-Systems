@@ -1,6 +1,8 @@
 -module(utils).
 -export([log/3,randomInt/1]).
 
+% Eine Datei mit den Utilities
+
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
 % Aufruf:

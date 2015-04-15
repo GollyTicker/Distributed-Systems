@@ -4,11 +4,7 @@
 -import(utils,[log/3]).
 -export([start/0]).
 
-% lc([server,hbq,...])
-% make:all().
-% unregister(SERVERPID).
-% f().
-% bash> rm -rf log/* && rm -rf *.beam && erl -make
+% Der Server
 
 % Servername aus der Config holen, server started, registrieren.
 % start: IO PID
@@ -50,16 +46,19 @@ initServer(ConfigList,Datei) ->
   State = [0,1, CMEM, HBQservice, Latency, ConfigList, Datei],
   State.
 
+% Der Server-Loop
 % loop: State -> Nothing
 loop([LoopNr,Nr,CMEM, HBQ, Latency, ConfigList, Datei]) ->
   log(Datei,server,["======= ",LoopNr," ======="]),
   receive
 
+    % getmsgid (aus em Entwurf)
     {Redakteur, getmsgid}  ->
       Redakteur ! {nid, Nr},
       log(Datei,server,["#",Nr," to editor ",Redakteur]),
       loop([LoopNr+1,Nr+1,CMEM, HBQ, Latency, ConfigList, Datei]);
       
+    % getmessages (aus em Entwurf)
     {Client, getmessages} ->
       ClientNr = cmem:getClientNNr(CMEM,Client),
       log(Datei,server,["Client ",Client," should receive ",ClientNr]),
@@ -70,6 +69,7 @@ loop([LoopNr,Nr,CMEM, HBQ, Latency, ConfigList, Datei]) ->
           loop([LoopNr+1,Nr,CMEM2, HBQ, Latency, ConfigList, Datei])
       end;
     
+    % dropmessage (aus em Entwurf)
     {dropmessage, [NNr,Msg,TSclientout]} -> 
       HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
       receive {reply, ok} ->

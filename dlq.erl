@@ -3,19 +3,24 @@
 -import(werkzeug,[to_String/1]).
 -import(utils,[log/3]).
 
+% Die DLQ
+
+% initDLQ (aus dem Entwurf)
 initDLQ(Size, Datei) -> 
   log(Datei,dlq,["initialized dlq"]),
   [[], Size, Datei].
 
-% Eine Message ist entweder eine Fehlermessage die eine Lücke von Nachricht Nr1 bis Nr2 schließt
+% Eine Message in der DLQ ist entweder eine Fehlermessage die eine Lücke von Nachricht Nr1 bis Nr2 schließt
 % oder eine reguläre Nachricht mit der eindeutigen Nr
 % [{Nr1, Nr2}, Msg, Ts1..Tsn]
 % [Nr, Msg, Ts1..Tsn]
+
+% expectedNr (aus dem Entwurf)
 expectedNr([[],_,_]) -> 1;
 expectedNr([DQueue,_,_]) -> getNr(lists:last(DQueue)) + 1.
 
-% Speichern einer Nachricht in der DLQ
-% [NNr,Msg,TSclientout,TShbqin]
+% Speichern einer Nachricht in der DLQ (aus dem Entwurf)
+% push2DLQ (aus dem Entwurf)
 push2DLQ([DQueue,Size,Datei],Entry,_) ->
   DQueue2 = case length(DQueue) of
     Size ->
@@ -29,7 +34,7 @@ push2DLQ([DQueue,Size,Datei],Entry,_) ->
   log(Datei,dlq,["#", getBothNr(Entry)," into dlq"]),
   [DQueue2 ++ [Entry2],Size,Datei].
 
-% Ausliefern einer Nachricht an einen Leser-Client
+% Ausliefern einer Nachricht an einen Leser-Client (aus dem Entwurf)
 % deliverMSG: Nr -> PID -> DLQ -> Datei -> Nr
 deliverMSG(Nr,ClientPID,DLQ,Datei) -> 
   {Terminated, Msg} = smallestNrGt(DLQ, Nr),
@@ -45,8 +50,8 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
 
 % smallestNrGt(DLQ,Nr) => {Terminated,[SendNr,Msg,TS1...TSn]}
 % Liefert die Nachricht mit der Nr (oder die nächst höhere Nachricht) aus der DLQ zurück.
-% Gibt es diese nicht, wird eine dummy Nachricht zurückgegeben und Terminated == true.
-% Fehlernachrichten werden nicht übertragen.
+% Gibt es diese nicht, wird eine Dummy-Nachricht zurückgegeben und Terminated wird wahr.
+% Fehlernachrichten werden also nicht übertragen.
 smallestNrGt([Queue,_,_], Nr) ->
   DroppedQueue = lists:filter(
     fun(X) -> 
@@ -58,6 +63,9 @@ smallestNrGt([Queue,_,_], Nr) ->
         {true, [Nr,"Sorry. No new messages for you :o",TS,TS,TS]};
     [Msg|_] -> {false, Msg}
   end.
+
+
+% Hilfsmethoden:
 
 % realMsg: Entry -> Bool
 realMsg([{_,_}|_]) -> false;

@@ -3,12 +3,14 @@
 -import(werkzeug,[timeMilliSecond/0,to_String/1]).
 -import(utils,[log/3,randomInt/1]).
 
+% Der Redakteur
 
 execute(ServerService, Config, Datei) ->
 
   Nrs = loop(5, ServerService, [], Config, Datei),
 
   % unique id without any response
+  % getmsgid (aus dem Entwurf)
   ServerService ! {self(), getmsgid},
 
   % log if the requested id was received
@@ -25,6 +27,7 @@ loop(Count, ServerService, Nrs,
     {TeamName, SendIntervall}, 
      Datei) -> 
 
+  % getmsgid (aus dem Entwurf)
   ServerService ! {self(), getmsgid},
 
   % Sendintervall after each id request
@@ -34,7 +37,6 @@ loop(Count, ServerService, Nrs,
     {nid, Nr} ->
       SendTime = timeMilliSecond(),
       Content = createText(TeamName, Nr, SendTime),
-      % log: dropped message NR at 16.06 09:55:43,525| content
       log(Datei,editor,["Dropped ", Content]),
       ServerService ! {dropmessage, [Nr,Content,now()]},
       loop(Count - 1, ServerService, [Nr|Nrs],
@@ -44,7 +46,7 @@ loop(Count, ServerService, Nrs,
       log(Datei,editor,["Unknown message: ", Any])
   end.
 
-% TODO: Hello world for Quotes
+
 createText(TeamName, Nr, SendTime) ->
   Quotes = [
     "People are just about as happy as they make up their minds to be - Abraham Lincoln ",
@@ -68,5 +70,5 @@ createText(TeamName, Nr, SendTime) ->
     "If someone betrays you once, its his fault. If he betrays you twice, its your fault ",
     "God Gives every bird its food, But he does not throw it into its nest "
   ],
-  lists:nth(randomInt(length(Quotes)), Quotes),
-  "#" ++ to_String(Nr) ++ " "++ TeamName ++ " |"++ SendTime ++ " Hello World".
+  Quote = lists:nth(randomInt(length(Quotes)), Quotes),
+  "#" ++ to_String(Nr) ++ " "++ TeamName ++ " |"++ SendTime ++ " " ++ Quote.

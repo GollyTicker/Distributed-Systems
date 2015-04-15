@@ -3,22 +3,23 @@
 -import(utils,[log/3]).
 -export([initCMEM/2,updateClient/4,getClientNNr/2, refreshCMEM/1]).
 
-% CMEM ADT: [LastSeenMapping,RemTime,Datei]
+% Implementiert das CMEM wie im Entwurf beschrieben
 
-% LastSeenMapping: Abbildung von ClientID auf dessen letzten Anfragezeitpunkt un die dazugehörige Nachrichtennummer
+% CMEM ADT: [LastSeenMapping,RemTime,Datei]
+% LastSeenMapping: Abbildung von ClientID auf dessen letzten Anfragezeitpunkt und die nächste zu schickende Nachrichtennummer
 % Als Liste von dreier Tupeln [{ClientID, NNr,LastTime}]
 
-% initCMEM: Initialisieren des CMEM
+% initCMEM: Initialisieren des CMEM (aus dem Entwurf)
 % initCMEM: Int -> Datei -> CMEM
 initCMEM(RemTime,Datei) ->
   CMEM = [[], RemTime, Datei],
   log(Datei,cmem,["Initialized cmem"]),
   CMEM.
 
-% updateClient: Speichern/Aktualisieren eines Clients in dem CMEM
+% updateClient: Speichern/Aktualisieren eines Clients in dem CMEM (aus dem Entwurf)
 % updateClient: CMEM -> ClientID -> Nr -> Datei -> CMEM
 updateClient(CMEM,ClientID,SendNr,Datei) ->
-  NextNr = SendNr + 1,
+  NextNr = SendNr + 1,  % Hochzählen im CMEM.
   [Map,Rem,CDatei] = CMEM2 = refreshCMEM(CMEM),
   Elem = {ClientID,NextNr,erlang:now()},
   case getClient(ClientID,CMEM2) of
@@ -27,6 +28,16 @@ updateClient(CMEM,ClientID,SendNr,Datei) ->
   end,
   Map2 = lists:keystore(ClientID,1,Map,Elem),
   [Map2,Rem,CDatei].
+
+% getClientNNr: Abfrage welche Nachrichtennummer der Client als nächstes erhalten darf (aus dem Entwurf)
+% getClientNNr: CMEM -> ClientID -> Nr
+getClientNNr(CMEM,ClientID) ->
+  case getClient(ClientID,CMEM) of
+      {NNr,_} -> NNr;
+      false -> 1   % ein unbekannter Client erhält die erste Nachricht
+  end.
+
+
 
 % Löscht veraltete Clients aus der CMEM.
 % refreshCMEM: CMEM -> CMEM
@@ -46,16 +57,6 @@ refreshCMEM([LastSeenMap, RemTime, Datei]) ->
      LastSeenMap),
   
   [NewMap,RemTime,Datei].
-
-
-% getClientNNr: Abfrage welche Nachrichtennummer der Client als nächstes erhalten darf
-% getClientNNr: CMEM -> ClientID -> Nr
-getClientNNr(CMEM,ClientID) ->
-  case getClient(ClientID,CMEM) of
-      {NNr,_} -> NNr;
-      false -> 1   % ein unbekannter Client erhält die erste Nachricht
-  end.
-
 
 
 % Hilfsmethode um einen Client zu holen: Returnt ein false oder ein Tupel

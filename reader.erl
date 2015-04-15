@@ -3,16 +3,17 @@
 -import(werkzeug,[timeMilliSecond/0]).
 -import(utils,[log/3]).
 
+% Der Leser-Client / Reader-Client
 
-execute(ServerService, Nrs, ClientNumber, Datei) ->
-  % Maybe do stuff here...
-  loop(ServerService, Nrs, ClientNumber, Datei).
+execute(ServerService, Nrs, ClientNumber, Datei) -> loop(ServerService, Nrs, ClientNumber, Datei).
 
 loop(ServerService, Nrs, ClientNumber, Datei) ->
   
+    % getmessages (aus dem Entwurf)
   ServerService ! {self(), getmessages},
 
   receive
+
     {reply,[Nr,Msg,_TSclientout,_TShbqin,_TShbqout,_TSdlqout]=MsgL,Terminated} ->
       
       TSclientIn = now(),

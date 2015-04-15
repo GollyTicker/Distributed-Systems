@@ -4,10 +4,9 @@
 -import(werkzeug, [get_config_value/2, to_String/1, timeMilliSecond/0, type_is/1]).
 -import(dlq, [initDLQ/2, push2DLQ/3, expectedNr/1, deliverMSG/4]).
 
-% make:all().
-% HBQ = hbq:start().
+% Die HBQ
 
-
+% startHBQ (aus dem Entwurf)
 startHBQ() ->
   {ok, ConfigList} = file:consult("server.cfg"),
   {ok, HbqName} = get_config_value(hbqname, ConfigList),
@@ -16,27 +15,33 @@ startHBQ() ->
   log(Datei,hbq,["Registered as ",HbqName," on ",node()]),
   loop([a,b,Datei],ConfigList).
 
+
+% Die HBQ Loop
 loop([HBQ, DLQ, Datei], ConfigList) ->
   receive
     Any ->
       log(Datei,hbq,["Received: ",Any]),
       case Any of 
 
+        % initHBQ (aus dem Entwurf)
         {Server, {request,initHBQ}} ->
           State = initHBQ(Datei, ConfigList, Server),
           Server ! {reply, ok},
           loop(State,ConfigList);
 
+        % pushHBQ (aus dem Entwurf)
         {Server, {request, pushHBQ, [NNr,Msg,TSclientout]}} -> 
           {NewHBQ, NewDLQ} = pushHBQ(HBQ, DLQ, [NNr,Msg,TSclientout]),
           Server ! {reply, ok},
           loop([NewHBQ, NewDLQ, Datei],ConfigList);
 
+        % deliverMSG (aus dem Entwurf)
         {Server, {request,deliverMSG, NNr,ToClient}} ->
           SendNNr = deliverMSG(NNr,ToClient,DLQ,Datei),
           Server ! {reply, SendNNr},
           loop([HBQ, DLQ, Datei],ConfigList);
 
+        % dellHBQ (aus dem Entwurf)
         {Server, {request,dellHBQ}} ->
           HBQDead = dellHBQ(ConfigList,Datei),
           Server ! {reply, HBQDead};
@@ -48,9 +53,8 @@ loop([HBQ, DLQ, Datei], ConfigList) ->
       end
   end.
 
+
 % Initialisieren der HBQ
-% HBQ ! {self(), {request,initHBQ}}
-% receive {reply, ok} 
 initHBQ(Datei, ConfigList, Server) -> 
   {ok,DLQLimit} = get_config_value(dlqlimit, ConfigList),
   Size = (2*DLQLimit)/3,
@@ -62,8 +66,6 @@ initHBQ(Datei, ConfigList, Server) ->
 
 
 % Speichern einer Nachricht in der HBQ
-% HBQ ! {self(), {request,pushHBQ,[NNr,Msg,TSclientout]}}
-% receive {reply, ok} 
 % pushHBQ: HBQ -> DLQ -> {HBQ,DLQ}
 pushHBQ([HQueue,HSize,HDatei] = HBQ,
         DLQ,
@@ -80,12 +82,6 @@ pushHBQ([HQueue,HSize,HDatei] = HBQ,
   HBQ2 = [NewHQueue,HSize,HDatei],
   
   flush2DLQ(HBQ2,DLQ2).
-
-toStringQueue([Queue|_]) -> to_String(lists:map(fun(X) -> hd(X) end,Queue)).
-
-logQueues(HBQ,DLQ,Datei) ->
-  log(Datei,hbq,[" HBQ: ",toStringQueue(HBQ)]),
-  log(Datei,dlq,[" DLQ: ",toStringQueue(DLQ)]).
 
 % flush2DLQ: HBQ -> DLQ -> {HBQ,DLQ}
 flush2DLQ([[],_,Datei]=HBQ,DLQ) ->
@@ -144,9 +140,8 @@ fehlerNachricht(ExpNr,SmallestNrInHBQ,Datei) ->
   % TSclientout, TShbqin
   [{ExpNr, To}, Msg,TS,TS].
 
+
 % Terminierung der HBQ
-% HBQ ! {self(), {request,dellHBQ}}
-% receive {reply, ok} 
 dellHBQ(ConfigList,Datei) ->
   {ok, HbqName} = get_config_value(hbqname, ConfigList),
   Success = case unregister(HbqName) of
@@ -156,4 +151,9 @@ dellHBQ(ConfigList,Datei) ->
   log(Datei,hbq,["Shutdown hbq and dlq: ",Success]).
 
 
+% Hilfsmethoden zum Printen von DLQ und HBQ
+toStringQueue([Queue|_]) -> to_String(lists:map(fun(X) -> hd(X) end,Queue)).
 
+logQueues(HBQ,DLQ,Datei) ->
+  log(Datei,hbq,[" HBQ: ",toStringQueue(HBQ)]),
+  log(Datei,dlq,[" DLQ: ",toStringQueue(DLQ)]).

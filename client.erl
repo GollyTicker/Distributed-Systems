@@ -3,6 +3,7 @@
 -import(werkzeug,[get_config_value/2, to_String/1,timeMilliSecond/0]).
 -import(utils,[log/3,randomInt/1]).
 
+% Der Client
 
 start() ->
   {ok, ConfigList} = file:consult("client.cfg"),
@@ -33,13 +34,14 @@ spawnClients(Clients, ServerService, ClientConfig) ->
 spawnClient(ClientNumber, ServerService, {_,LifeTime,_}=ClientConfig) ->
     spawn(
       fun() ->
-        timer:kill_after(trunc(LifeTime * 1000)),
+        timer:kill_after(trunc(LifeTime * 1000)),   % autoamtisches killer nach LifeTime Sekunden
         Datei = createLogFile(ClientNumber),
         log(Datei,editor,["Spawning client ", ClientNumber, " for ", node()]),
         loop(ClientNumber, ServerService, ClientConfig, Datei) 
       end
     ).
 
+% Abwechselnd wird der Redakteur und der Leser ausgeführt.
 loop(ClientNumber, ServerService,
   {TeamName, LifeTime, SendIntervall}, Datei) ->
 
