@@ -44,13 +44,13 @@ deliverMSG(Nr,ClientPID,DLQ,Datei) ->
   SendNr.
 
 % smallestNrGt(DLQ,Nr) => {Terminated,[SendNr,Msg,TS1...TSn]}
-% Liefert die nächste höhere Nachricht nach Nr aus der DLQ zurück.
+% Liefert die Nachricht mit der Nr (oder die nächst höhere Nachricht) aus der DLQ zurück.
 % Gibt es diese nicht, wird eine dummy Nachricht zurückgegeben und Terminated == true.
 % Fehlernachrichten werden nicht übertragen.
 smallestNrGt([Queue,_,_], Nr) ->
   DroppedQueue = lists:filter(
     fun(X) -> 
-      realMsg(X) and (getNr(X) > Nr)
+      realMsg(X) and (getNr(X) >= Nr)
     end, Queue),
   case DroppedQueue of
     [] ->
