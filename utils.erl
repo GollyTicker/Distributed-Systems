@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1]).
+-export([log/3,randomInt/1, connectToNameService/2]).
 
 % Eine Datei mit den Utilities
 
@@ -26,4 +26,10 @@ log(Datei,Module,List) ->
 randomInt(Num) ->
   random:seed(erlang:now()),
   random:uniform(Num).
+
+connectToNameService(NSnode, NSname) ->
+  net_adm:ping(NSnode),
+  timer:sleep(500),
+  NameService = global:whereis_name(NSname),
+  NameService.
 

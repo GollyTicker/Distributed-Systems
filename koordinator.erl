@@ -3,7 +3,10 @@
 -export([start/0]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
--import(utils,[log/3]).
+-import(utils,[log/3, connectToNameService/2]).
+
+
+-record(cfg, {worktime, termtime, ggtNo, nsnode, nsname, koordname, quota, toggle}).
 
 % {From:,getsteeringval} Die Anfrage nach den steuernden Werten durch den Starter Prozess (From ist seine PID).
 % {hello,Clientname}: Ein ggT-Prozess meldet sich beim Koordinator mit Namen Clientname an (Name ist der lokal registrierte Name, keine PID!).
@@ -17,102 +20,61 @@
 % {calc,WggT}: Der Koordinator startet eine neue ggT-Berechnung mit Wunsch-ggT WggT.
 % kill: Der Koordinator wird beendet und sendet allen ggT-Prozessen das kill-Kommando.
 
-start() -> 0.
-
-% Der Server
-
-% Servername aus der Config holen, server started, registrieren.
-% start: IO PID
 start() ->
-  {ok, ConfigList} = file:consult("server.cfg"),
-  Datei = list_to_atom("log/Server@" ++ atom_to_list(node()) ++ ".log"),
-  PID = spawn( fun() -> State = initServer(ConfigList,Datei), loop(State) end),
-  {ok, ServerName} = get_config_value(servername, ConfigList),
-  register(ServerName,PID),
-  
-  log(Datei,server,["Registered as ",ServerName," on ",node()," with addr ",PID]),
-  
-  PID. 
+  Cfg = loadCfg(),
+  NSnode = Cfg#cfg.nsnode,
+  NSname = Cfg#cfg.nsname,
+  NameService = connectToNameService(NSnode, NSname),
 
-
-% initialisieren des CMEM, HBQ, DLQ, Logging und Erzeugen des Initialzustands
-% initServer: ConfigList -> Datei -> State
-initServer(ConfigList,Datei) -> 
-  log(Datei,server,["Initalizing Server"]),
-
-  {ok, RemTime} = get_config_value(clientlifetime, ConfigList),
-  CMEM = cmem:initCMEM(RemTime,Datei),
-  
-  {ok, Latency} = get_config_value(latency,ConfigList),
-
-  {ok, HBQnode} = get_config_value(hbqnode,ConfigList),
-  {ok, _HBQname} = get_config_value(hbqname,ConfigList),
-  % HBQservice = {_HBQname,HBQnode},
-  
-  HBQservice = spawn(HBQnode,fun() -> hbq:startHBQ() end),
-
-  log(Datei, server,["Initializing hbq - Address: ",HBQservice]),
-  HBQservice ! {self(), {request,initHBQ}},
+  KoordName = Cfg#cfg.koordname,
+  register(KoordName, self()),
+  NameService ! {self(), {rebind, KoordName, node()}},
   receive
-    {reply, ok} -> log(Datei,server,["Received ok from hbq"])
+    ok -> io:format("Cool");
+    in_use -> io:format("Not Cool")
   end,
-  
-  log(Datei,server,["Initialized Server"]),
-  State = [0,1, CMEM, HBQservice, Latency, ConfigList, Datei],
-  State.
 
-% Der Server-Loop
-% loop: State -> Nothing
-loop([LoopNr,Nr,CMEM, HBQ, Latency, ConfigList, Datei]) ->
-  log(Datei,server,["======= ",LoopNr," ======="]),
-  receive
+  loop(Cfg, NameService),
+  % cfg <- getsteeringval
+  % spawnggt(Cfg,NameService,ggtName,ggtNr,StarterNr).
+  %  0.
+  NameService.
 
-    % getmsgid (aus em Entwurf)
-    {Redakteur, getmsgid}  ->
-      Redakteur ! {nid, Nr},
-      log(Datei,server,["#",Nr," to editor ",Redakteur]),
-      loop([LoopNr+1,Nr+1,CMEM, HBQ, Latency, ConfigList, Datei]);
-      
-    % getmessages (aus em Entwurf)
-    {Client, getmessages} ->
-      ClientNr = cmem:getClientNNr(CMEM,Client),
-      log(Datei,server,["Client ",Client," should receive ",ClientNr]),
-      HBQ ! {self(), {request,deliverMSG,ClientNr,Client}},
-      receive
-        {reply,SendNr} ->
-          CMEM2 = cmem:updateClient(CMEM,Client,SendNr,Datei),
-          loop([LoopNr+1,Nr,CMEM2, HBQ, Latency, ConfigList, Datei])
-      end;
-    
-    % dropmessage (aus em Entwurf)
-    {dropmessage, [NNr,Msg,TSclientout]} -> 
-      HBQ ! {self(), {request, pushHBQ, [NNr,Msg,TSclientout]}},
-      receive {reply, ok} ->
-        log(Datei,server,["Inserted #",NNr," into hbq"]),
-        loop([LoopNr+1,Nr,CMEM, HBQ, Latency, ConfigList, Datei]) 
-      end;
-
-    Any ->
-      log(Datei,server,["Received unknown message: ",Any]),
-      loop([LoopNr+1,Nr,CMEM, HBQ, Latency, ConfigList, Datei])
-
-  after Latency * 1000 -> 
-      shutdown(HBQ, ConfigList, Datei)
-  
-  end
-  .
-
-
-shutdown(HBQ, ConfigList, Datei)->
-  HBQ ! {self(),{request,dellHBQ}},
+loop(Cfg, NameService) -> 
   receive 
-    {reply, HBQDead} -> HBQDead
-  end,
-  {ok, ServerName} = get_config_value(servername, ConfigList),
-  case unregister(ServerName) of
-    true -> log(Datei,server,["Shutdown Server at ",timeMilliSecond()]), ok;
-    _ -> nok
+    {From,getsteeringval} -> 
+      From ! {
+                steeringval, 
+                Cfg#cfg.worktime, 
+                Cfg#cfg.termtime, 
+                Cfg#cfg.quota, 
+                Cfg#cfg.ggtNo
+              },
+      loop(Cfg, NameService);
+    Any -> Any
   end.
 
+loadCfg() ->
+  {ok, ConfigList} = file:consult("koordinator.cfg"),
+  {ok, WorkTime} = get_config_value(arbeitszeit, ConfigList),
+  {ok, TermTime} = get_config_value(termzeit, ConfigList),
+  {ok, GGTProcessNo} = get_config_value(ggtprozessnummer, ConfigList),
+
+  {ok, NSnode} = get_config_value(nameservicenode, ConfigList),
+  {ok, NSname} = get_config_value(nameservicename, ConfigList),
+  {ok, KoordName} = get_config_value(koordinatorname, ConfigList),
+
+  {ok, Quota} = get_config_value(quote, ConfigList),
+  {ok, Toggle} = get_config_value(korrigieren, ConfigList),
+  #cfg{
+    worktime = WorkTime, 
+    termtime = TermTime, 
+    ggtNo = GGTProcessNo, 
+    nsnode = NSnode, 
+    nsname = NSname, 
+    koordname = KoordName, 
+    quota = Quota, 
+    toggle = Toggle
+  }.
 
 

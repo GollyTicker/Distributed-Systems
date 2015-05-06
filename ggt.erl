@@ -21,7 +21,5 @@
 % fi 
 
 
-spawnggt(Cfg,NameService,ggtName,ggtNr,StarterNr) -> 0.
-
-start() -> 0.
+spawnggt(Cfg,NameService,GGTname,GGTnr,StarterNr) -> 0.
 

@@ -1,27 +1,56 @@
 -module(starter).
 
--export([start/0]).
+-export([start/1]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
--import(utils,[log/3]).
+-import(utils,[log/3, connectToNameService/2]).
 
 -import(ggt,[spawnggt/5]).
+
+-record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
 
 % {steeringval,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer}: die steuernden Werte für die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Verzögerungszeit zur Berechnung in Sekunden, TermZeit ist die Wartezeit in Sekunden, bis eine Wahl für eine Terminierung initiiert wird, Quota ist die konkrete Anzahl an benotwendigten Zustimmungen zu einer Terminierungsabstimmung und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.
 
 
-% ruft spawnggt(Cfg,ggtName,ggtNr,StarterNr) auf.
-
-start() ->
+start([StarterNrStr, _Start]) ->
+  StarterNr = list_to_integer(StarterNrStr),
   Cfg = loadCfg(),
-  NameService = connectToNameService(Cfg),
-  % cfg <- getsteeringval
-  % spawnggt(Cfg,NameService,ggtName,ggtNr,StarterNr).
-  %  0.
-  NameService.
+  Datei = list_to_atom("log/ggt"++ to_String(StarterNr)++"@" ++ atom_to_list(node()) ++ ".log"),
+  NSnode = Cfg#cfg.nsnode,
+  NSname = Cfg#cfg.nsname,
+  NameService = connectToNameService(NSnode, NSname),
+
+  NameService ! {self(), {lookup, Cfg#cfg.koordname}},
+  KID = receive
+    not_found -> log(Datei,starter,["Koordinator not found: ", Cfg#cfg.koordname]);
+    {pin, PID} -> log(Datei,starter,["Koordinator found: ", PID]), PID
+  end,
+
+  steeringVal(Cfg, NameService, KID, StarterNr,Datei).
+
+startggts(_,_,_,_,0,_,_,_) -> ok;
+startggts(Cfg,
+          ArbeitsZeit,
+          TermZeit,
+          Quota,
+          GGTNo,
+          NameService,
+          StarterNr,
+          Datei) ->
+  GGTname = lists:flatmap(fun(X) -> to_String(X) end,[Cfg#cfg.teamnr,Cfg#cfg.pgruppe,GGTNo,StarterNr]),
+  log(Datei,starter,["Spawning ggt ", GGTNo, " with Name ", GGTname]),
+  spawnggt(Cfg,NameService,GGTname,GGTNo,StarterNr),
+  startggts(Cfg,ArbeitsZeit,TermZeit,Quota,GGTNo - 1,NameService,StarterNr,Datei).
 
 
--record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
+steeringVal(Cfg, NameService, KID, StarterNr,Datei) ->
+  KID ! {self(), getsteeringval},
+  receive 
+    {steeringval,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer} -> 
+      log(Datei,starter,["Received steeringval:",ArbeitsZeit," ",TermZeit," ",Quota," ",GGTProzessnummer]),
+      startggts(Cfg,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer,NameService,StarterNr,Datei);
+    Any -> Any 
+  end.
 
 
 loadCfg() ->
@@ -33,23 +62,6 @@ loadCfg() ->
   {ok, KoordName} = get_config_value(koordinatorname, ConfigList),
   Cfg = #cfg{pgruppe = PGruppe, teamnr = TeamNr, nsnode = NSnode, nsname = NSname, koordname = KoordName},
   Cfg.
-
-connectToNameService(Cfg) ->
-  NSnode = Cfg#cfg.nsnode,
-  NSname = Cfg#cfg.nsname,
-  net_adm:ping(NSnode),
-  timer:sleep(500),
-  NameService = global:whereis_name(NSname),
-  NameService.
-%  
-%  PID = spawn( fun() -> State = initServer(ConfigList,Datei), loop(State) end),
-%  {ok, ServerName} = get_config_value(servername, ConfigList),
-%  register(ServerName,PID),
-%  Datei = list_to_atom("log/Server@" ++ atom_to_list(node()) ++ ".log"),
-%  %log(Datei,server,["Registered as ",ServerName," on ",node()," with addr ",PID]),
-%  
-%  PID.
-
 
 
 
