@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1, connectToNameService/2]).
+-export([log/3,randomInt/1, connectToNameService/2,lookup/3]).
 
 % Eine Datei mit den Utilities
 
@@ -33,3 +33,9 @@ connectToNameService(NSnode, NSname) ->
   NameService = global:whereis_name(NSname),
   NameService.
 
+lookup(NameService,Self,What) -> 
+  NameService ! {Self, {lookup, What}},
+  receive
+    not_found -> not_found;
+    {pin, PID} -> PID
+  end.

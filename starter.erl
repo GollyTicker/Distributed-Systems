@@ -3,14 +3,13 @@
 -export([start/1]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
--import(utils,[log/3, connectToNameService/2]).
+-import(utils,[log/3, connectToNameService/2,lookup/3]).
 
 -import(ggt,[spawnggt/5]).
 
--record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
-
 % {steeringval,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer}: die steuernden Werte für die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Verzögerungszeit zur Berechnung in Sekunden, TermZeit ist die Wartezeit in Sekunden, bis eine Wahl für eine Terminierung initiiert wird, Quota ist die konkrete Anzahl an benotwendigten Zustimmungen zu einer Terminierungsabstimmung und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.
 
+-record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
 
 start([StarterNrStr, _Start]) ->
   StarterNr = list_to_integer(StarterNrStr),
@@ -19,12 +18,8 @@ start([StarterNrStr, _Start]) ->
   NSnode = Cfg#cfg.nsnode,
   NSname = Cfg#cfg.nsname,
   NameService = connectToNameService(NSnode, NSname),
-
-  NameService ! {self(), {lookup, Cfg#cfg.koordname}},
-  KID = receive
-    not_found -> log(Datei,starter,["Koordinator not found: ", Cfg#cfg.koordname]);
-    {pin, PID} -> log(Datei,starter,["Koordinator found: ", PID]), PID
-  end,
+  KID = lookup(NameService,self(),Cfg#cfg.koordname),
+  log(Datei,starter,["Lookup koordinator: ", KID]),
 
   steeringVal(Cfg, NameService, KID, StarterNr,Datei).
 
@@ -37,11 +32,20 @@ startggts(Cfg,
           NameService,
           StarterNr,
           Datei) ->
-  GGTname = lists:flatmap(fun(X) -> to_String(X) end,[Cfg#cfg.teamnr,Cfg#cfg.pgruppe,GGTNo,StarterNr]),
+  
+  GGTname = makeGGTname(Cfg,StarterNr,GGTNo),
   log(Datei,starter,["Spawning ggt ", GGTNo, " with Name ", GGTname]),
-  spawnggt(Cfg,NameService,GGTname,GGTNo,StarterNr),
+  spawn(fun() -> spawnggt(Cfg,NameService,GGTname,GGTNo,StarterNr) end),
+
   startggts(Cfg,ArbeitsZeit,TermZeit,Quota,GGTNo - 1,NameService,StarterNr,Datei).
 
+makeGGTname(Cfg,StarterNr,GGTNo) ->
+  list_to_atom(
+    lists:flatmap(
+      fun(X) -> to_String(X) end,
+      [Cfg#cfg.teamnr,Cfg#cfg.pgruppe,GGTNo,StarterNr]
+    )
+  ).
 
 steeringVal(Cfg, NameService, KID, StarterNr,Datei) ->
   KID ! {self(), getsteeringval},
