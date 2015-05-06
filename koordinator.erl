@@ -1,57 +1,84 @@
 -module(koordinator).
-
 -export([start/0]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
--import(utils,[log/3, connectToNameService/2]).
+-import(utils,[log/3,lookup/3,connectToNameService/2,killMe/2]).
 
+-import(sets,[to_list/1,from_list/1,add_element/2]).
 
 -record(cfg, {worktime, termtime, ggtNo, nsnode, nsname, koordname, quota, toggle}).
-
-% {From:,getsteeringval} Die Anfrage nach den steuernden Werten durch den Starter Prozess (From ist seine PID).
-% {hello,Clientname}: Ein ggT-Prozess meldet sich beim Koordinator mit Namen Clientname an (Name ist der lokal registrierte Name, keine PID!).
-% {briefmi,{Clientname,CMi,CZeit}}: Ein ggT-Prozess mit Namen Clientname (keine PID!) informiert über sein neues Mi CMi um CZeit Uhr. 
-% {From,briefterm,{Clientname,CMi,CZeit}}: Ein ggT-Prozess mit Namen Clientname (keine PID!) und Absender From (ist PID) informiert über über die Terminierung der Berechnung mit Ergebnis CMi um CZeit Uhr.
-% reset: Der Koordinator sendet allen ggT-Prozessen das kill-Kommando und bringt sich selbst in den initialen Zustand, indem sich Starter wieder melden können.
-% step: Der Koordinator beendet die Initialphase und bildet den Ring. Er wartet nun auf den Start einer ggT-Berechnung.
-% prompt: Der Koordinator erfragt bei allen ggT-Prozessen per tellmi deren aktuelles Mi ab und zeigt dies im log an.
-% nudge: Der Koordinator erfragt bei allen ggT-Prozessen per pingGGT deren Lebenszustand ab und zeigt dies im log an.
-% toggle: Der Koordinator verändert den Flag zur Korrektur bei falschen Terminierungsmeldungen.
-% {calc,WggT}: Der Koordinator startet eine neue ggT-Berechnung mit Wunsch-ggT WggT.
-% kill: Der Koordinator wird beendet und sendet allen ggT-Prozessen das kill-Kommando.
+-record(st, {phase=initial, wggt=undefined, smi=undefined, ggtset=sets:new(),ggtring=[],toggle=0}).
 
 start() ->
   Cfg = loadCfg(),
   NSnode = Cfg#cfg.nsnode,
   NSname = Cfg#cfg.nsname,
   NameService = connectToNameService(NSnode, NSname),
+  Datei = list_to_atom("log/Koordinator@" ++ atom_to_list(node()) ++ ".log"),
 
   KoordName = Cfg#cfg.koordname,
+  log(Datei,koord,["Registering at nameservice: ",KoordName]),
   register(KoordName, self()),
   NameService ! {self(), {rebind, KoordName, node()}},
   receive
-    ok -> io:format("Cool");
-    in_use -> io:format("Not Cool")
+    ok -> log(Datei,koord,["Registered at nameservice: ",KoordName])
   end,
 
-  loop(Cfg, NameService),
-  % cfg <- getsteeringval
-  % spawnggt(Cfg,NameService,ggtName,ggtNr,StarterNr).
-  %  0.
-  NameService.
+  State = #st{toggle=Cfg#cfg.toggle},
+  loop(Cfg,KoordName,NameService,State,Datei).
 
-loop(Cfg, NameService) -> 
-  receive 
+loop(Cfg,KoordName,NameService,State,Datei) -> 
+  NewState = receive 
     {From,getsteeringval} -> 
-      From ! {
-                steeringval, 
-                Cfg#cfg.worktime, 
-                Cfg#cfg.termtime, 
-                Cfg#cfg.quota, 
-                Cfg#cfg.ggtNo
-              },
-      loop(Cfg, NameService);
-    Any -> Any
+      From ! {steeringval,Cfg#cfg.worktime,Cfg#cfg.termtime,Cfg#cfg.quota,Cfg#cfg.ggtNo},
+      State;
+
+    {hello,Clientname} -> ok;
+
+    {briefmi,{Clientname,CMi,CZeit}} -> ok;
+
+    {From,briefterm,{Clientname,CMi,CZeit}} -> ok;
+
+    reset -> ok;
+
+    step -> ok;
+
+    prompt -> 
+      sendToGGTs(NameService,{self(),tellmi},State#st.ggtset),
+      State;
+
+    {mi, Mi} -> 
+      log(Datei, koord, ["Mi: ", Mi]),
+      State;
+
+    nudge -> 
+      sendToGGTs(NameService,{self(),pingGGT},State#st.ggtset),
+      State;
+
+    {pongGGT, GGTname} -> 
+      log(Datei, koord, ["Process ",GGTname, " alive."]),
+      State;
+
+    toggle ->
+      State#st{toggle = (1 - State#st.toggle)};
+
+    {calc,WggT} -> ok;
+
+    kill -> 
+      log(Datei, koord, ["Terminating koordinator: ", KoordName]),
+      Msg = killMe(KoordName, NameService),
+      sendToGGTs(NameService,kill,State#st.ggtset),
+      log(Datei, koord, ["Terminated with: ", Msg]),
+      Msg;
+
+    Any -> 
+      log(Datei, koord, ["Received unknown message: ", Any]), State
+  end,
+  case NewState of
+    killed -> killed;
+    _ -> 
+      log(Datei, koord, ["New state: ", NewState]),
+      loop(Cfg,KoordName,NameService,NewState,Datei)
   end.
 
 loadCfg() ->
@@ -78,3 +105,12 @@ loadCfg() ->
   }.
 
 
+sendToGGTs(NameService,Msg,GGTset) ->
+  lists:map(fun(X) -> lookupAndSend(NameService,X,Msg) end,to_list(GGTset)),
+  ok.
+
+lookupAndSend(NameService,Name,Msg) ->
+  PID = lookup(NameService,self(),Name),
+  PID ! Msg.
+
+makeRing() -> 0.

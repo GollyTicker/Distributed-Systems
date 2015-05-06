@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1, connectToNameService/2,lookup/3]).
+-export([log/3,randomInt/1, connectToNameService/2,lookup/3,killMe/2]).
 
 % Eine Datei mit den Utilities
 
@@ -38,4 +38,13 @@ lookup(NameService,Self,What) ->
   receive
     not_found -> not_found;
     {pin, PID} -> PID
+  end.
+
+
+killMe(Name, NameService) ->
+  NameService ! {self(),{unbind,Name}},
+  unregister(Name),
+  receive
+    ok -> killed;
+    Any -> Any 
   end.

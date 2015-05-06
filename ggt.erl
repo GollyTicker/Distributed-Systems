@@ -3,7 +3,7 @@
 -export([spawnggt/8]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
--import(utils,[log/3,lookup/3]).
+-import(utils,[log/3,lookup/3,killMe/2]).
 
 -record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
 -record(st, {left=undefined, right=undefined, mi=undefined, initiator=undefined, nvotes=undefined}).
@@ -39,9 +39,11 @@ spawnggt(Cfg,NameService,GGTname,GGTnr,StarterNr,AZ,TZ,Q) ->
 loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) -> 
   log(Datei,GGTname,["Ready ggt CFG teamnr: ",Cfg#cfg.teamnr]),   
   NewState = receive 
-    {setneighbors,LeftN,RightN} -> 
-      log(Datei, GGTname, ["setneighbors l: ", LeftN, " r: ", RightN]),
-      State#st{left = LeftN, right = RightN};
+    {setneighbors,LeftName,RightName} -> 
+      LeftID = lookup(NameService,self(),LeftName),
+      RightID = lookup(NameService,self(),RightName),
+      log(Datei, GGTname, ["setneighbors l: ", LeftID, " r: ", RightID]),
+      State#st{left = LeftID, right = RightID};
 
     {setpm,MiNeu} -> 
       log(Datei, GGTname, ["setpm ", MiNeu]),
@@ -80,10 +82,10 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) ->
 
   end,
   case NewState of
-      killed -> killed;
-      _ -> 
-        log(Datei, GGTname, ["New state: ", NewState]),
-        loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei)
+    killed -> killed;
+    _ -> 
+      log(Datei, GGTname, ["New state: ", NewState]),
+      loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei)
   end.
 
 
@@ -101,13 +103,5 @@ sendY(State, Y) ->
       State#st.right ! {sendy, NewMi},
       NewState;
     _ -> State
-  end.
-
-killMe(GGTname, NameService) ->
-  NameService ! {self(),{unbind,GGTname}},
-  unregister(GGTname),
-  receive
-    ok -> killed;
-    Any -> Any 
   end.
 
