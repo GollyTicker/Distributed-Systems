@@ -1,6 +1,6 @@
 -module(ggt).
 
--export([spawnggt/4]).
+-export([spawnggt/5]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
 -import(utils,[log/3]).
@@ -21,6 +21,6 @@
 % fi 
 
 
-spawnggt(Cfg,ggtName,ggtNr,StarterNr) -> 0.
+spawnggt(Cfg,NameService,ggtName,ggtNr,StarterNr) -> 0.
 
 start() -> 0.
