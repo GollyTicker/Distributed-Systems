@@ -1,11 +1,9 @@
 -module(starter).
-
 -export([start/1]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
 -import(utils,[log/3, connectToNameService/2,lookup/3]).
-
--import(ggt,[spawnggt/5]).
+-import(ggt,[spawnggt/8]).
 
 % {steeringval,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer}: die steuernden Werte für die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Verzögerungszeit zur Berechnung in Sekunden, TermZeit ist die Wartezeit in Sekunden, bis eine Wahl für eine Terminierung initiiert wird, Quota ist die konkrete Anzahl an benotwendigten Zustimmungen zu einer Terminierungsabstimmung und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.
 
@@ -23,29 +21,17 @@ start([StarterNrStr, _Start]) ->
 
   steeringVal(Cfg, NameService, KID, StarterNr,Datei).
 
+
 startggts(_,_,_,_,0,_,_,_) -> ok;
-startggts(Cfg,
-          ArbeitsZeit,
-          TermZeit,
-          Quota,
-          GGTNo,
-          NameService,
-          StarterNr,
-          Datei) ->
+startggts(Cfg,AZ,TZ,Q,
+          GGTNo,NameService,StarterNr,Datei) ->
   
   GGTname = makeGGTname(Cfg,StarterNr,GGTNo),
   log(Datei,starter,["Spawning ggt ", GGTNo, " with Name ", GGTname]),
-  spawn(fun() -> spawnggt(Cfg,NameService,GGTname,GGTNo,StarterNr) end),
+  spawn(fun() -> spawnggt(Cfg,NameService,GGTname,GGTNo,StarterNr,AZ,TZ,Q) end),
 
-  startggts(Cfg,ArbeitsZeit,TermZeit,Quota,GGTNo - 1,NameService,StarterNr,Datei).
+  startggts(Cfg,AZ,TZ,Q,GGTNo - 1,NameService,StarterNr,Datei).
 
-makeGGTname(Cfg,StarterNr,GGTNo) ->
-  list_to_atom(
-    lists:flatmap(
-      fun(X) -> to_String(X) end,
-      [Cfg#cfg.teamnr,Cfg#cfg.pgruppe,GGTNo,StarterNr]
-    )
-  ).
 
 steeringVal(Cfg, NameService, KID, StarterNr,Datei) ->
   KID ! {self(), getsteeringval},
@@ -55,6 +41,15 @@ steeringVal(Cfg, NameService, KID, StarterNr,Datei) ->
       startggts(Cfg,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer,NameService,StarterNr,Datei);
     Any -> Any 
   end.
+
+
+makeGGTname(Cfg,StarterNr,GGTNo) ->
+  list_to_atom(
+    lists:flatmap(
+      fun(X) -> to_String(X) end,
+      [Cfg#cfg.teamnr,Cfg#cfg.pgruppe,GGTNo,StarterNr]
+    )
+  ).
 
 
 loadCfg() ->

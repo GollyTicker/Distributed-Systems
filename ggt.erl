@@ -1,11 +1,13 @@
 -module(ggt).
 
--export([spawnggt/5]).
+-export([spawnggt/8]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
 -import(utils,[log/3,lookup/3]).
 
 -record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
+-record(st, {left=undefined, right=undefined, mi=undefined, initiator=undefined, nvotes=undefined}).
+
 
 % {setneighbors,LeftN,RightN}: die (lokal auf deren Node registrieten und im Namensdienst registrierten) Namen (keine PID!) des linken und rechten Nachbarn werden gesetzt.
 % {setpm,MiNeu}: die von diesem Prozess zu berabeitenden Zahl für eine neue Berechnung wird gesetzt.
@@ -16,21 +18,7 @@
 % {From,pingGGT}: Sendet ein pongGGT an From (ist PID): From ! {pongGGT,GGTname}. Wird vom Koordinator z.B. genutzt, um auf manuelle Anforderung hin die Lebendigkeit des Rings zu prüfen.
 % kill: der ggT-Prozess wird beendet.
 
-% {Eine Nachricht <y> ist eingetroffen}
-% if y < Mi:
-%   Mi := mod(Mi-1,y)+1
-%   send #Mi to all neighbours
-% fi 
-
-loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,Datei) -> 
-  log(Datei,GGTname,["Ready ggt CFG teamnr: ",Cfg#cfg.teamnr]),   
-  receive 
-    bla -> 
-      loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,Datei);
-    Any -> Any
-  end.
-
-spawnggt(Cfg,NameService,GGTname,GGTnr,StarterNr) -> 
+spawnggt(Cfg,NameService,GGTname,GGTnr,StarterNr,AZ,TZ,Q) -> 
   Datei = list_to_atom("log/"++ to_String(GGTname)++"@" ++ atom_to_list(node()) ++ ".log"),
   
   log(Datei,GGTname,["Registering at nameservice: ",GGTname]),
@@ -43,7 +31,83 @@ spawnggt(Cfg,NameService,GGTname,GGTnr,StarterNr) ->
   KID = lookup(NameService,self(),Cfg#cfg.koordname),
   log(Datei,GGTname,["Lookup koordinator: ", KID]),
   
-  loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,Datei).
+  KID ! {hello, GGTname},
+  State = #st{},
+  loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei).
 
 
+loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) -> 
+  log(Datei,GGTname,["Ready ggt CFG teamnr: ",Cfg#cfg.teamnr]),   
+  NewState = receive 
+    {setneighbors,LeftN,RightN} -> 
+      log(Datei, GGTname, ["setneighbors l: ", LeftN, " r: ", RightN]),
+      State#st{left = LeftN, right = RightN};
+
+    {setpm,MiNeu} -> 
+      log(Datei, GGTname, ["setpm ", MiNeu]),
+      State#st{mi = MiNeu};
+
+    {sendy,Y} -> 
+      log(Datei, GGTname, ["sendy ", Y]),
+      sendY(State, Y);
+
+    {From,{vote,Initiator}} -> 
+      
+      ok;
+
+    {voteYes,Name} -> 
+      
+      ok;
+
+    {From,tellmi} -> 
+      log(Datei, GGTname, ["tellmi ", From]),
+      From ! {mi, State#st.mi},
+      State;
+
+    {From,pingGGT} -> 
+      log(Datei, GGTname, ["pingGGT ", From]),
+      From ! {pongGGT, GGTname},
+      State;
+
+    kill -> 
+      log(Datei, GGTname, ["terminating ggt: ", GGTname]),
+      Msg = killMe(GGTname, NameService),
+      log(Datei, GGTname, ["terminated with: ", Msg]),
+      Msg;
+
+    Any -> 
+      log(Datei, GGTname, ["Received unknown message: ", Any]), State
+
+  end,
+  case NewState of
+      killed -> killed;
+      _ -> 
+        log(Datei, GGTname, ["New state: ", NewState]),
+        loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei)
+  end.
+
+
+% if y < Mi:
+%   Mi := mod(Mi-1,y)+1
+%   send #Mi to all neighbours
+% fi 
+% State -> Int -> State
+sendY(State, Y) ->
+  case Y < State#st.mi of
+    true -> 
+      NewMi = ((State#st.mi-1) rem Y)+1,
+      NewState = State#st{mi = NewMi},
+      State#st.left ! {sendy, NewMi},
+      State#st.right ! {sendy, NewMi},
+      NewState;
+    _ -> State
+  end.
+
+killMe(GGTname, NameService) ->
+  NameService ! {self(),{unbind,GGTname}},
+  unregister(GGTname),
+  receive
+    ok -> killed;
+    Any -> Any 
+  end.
 
