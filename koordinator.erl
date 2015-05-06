@@ -116,5 +116,3 @@ shutdown(HBQ, ConfigList, Datei)->
 
 
 
-
-
