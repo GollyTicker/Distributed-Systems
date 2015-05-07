@@ -1,5 +1,5 @@
 -module(koordinator).
--export([start/0]).
+-export([start/0,lookupNeighbors/2]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
 -import(utils,[log/3,lookup/3,connectToNameService/2,killMe/2]).
@@ -8,6 +8,7 @@
 
 -record(cfg, {worktime, termtime, ggtNo, nsnode, nsname, koordname, quota, toggle}).
 -record(st, {phase=initial, wggt=undefined, smi=undefined, ggtset=sets:new(),ggtring=[],toggle=0}).
+% phase is element of {initial, ready}
 
 start() ->
   Cfg = loadCfg(),
@@ -33,15 +34,37 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       From ! {steeringval,Cfg#cfg.worktime,Cfg#cfg.termtime,Cfg#cfg.quota,Cfg#cfg.ggtNo},
       State;
 
-    {hello,Clientname} -> ok;
+    {hello,GGTname} ->
+      Func = fun() -> 
+        NewSet = add_element(GGTname, State#st.ggtset),
+        log(Datei,koord,["Adding new GGT: ",GGTname]),
+        State#st{ggtset = NewSet}
+      end,
+      inPhase(initial,Func,State);
 
-    {briefmi,{Clientname,CMi,CZeit}} -> ok;
+    {briefmi,{GGTname,CMi,CZeit}} -> 
+      log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
+      State;
 
-    {From,briefterm,{Clientname,CMi,CZeit}} -> ok;
+    {From,briefterm,{GGTname,CMi,CZeit}} -> State;
 
-    reset -> ok;
+    reset -> State;
 
-    step -> ok;
+    step ->
+      %makeRing()
+      F = fun() ->
+        Ring = makeRing(State#st.ggtset),
+        log(Datei,koord,["Made Ring: ",Ring]),
+        SetNeighbors = fun(GGTname) ->
+          {Left,Right} = lookupNeighbors(Ring,GGTname),
+          log(Datei,koord,["Set neighbors <",Left, ",", GGTname, ",",Right,">"]),
+          {setneighbors,Left,Right}
+        end,
+        sendToGGTsByFunc(NameService, SetNeighbors,Ring),
+        State#st{phase=ready,ggtring=Ring}
+      end,
+      inPhase(initial,F,State);
+      
 
     prompt -> 
       sendToGGTs(NameService,{self(),tellmi},State#st.ggtset),
@@ -62,8 +85,12 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
     toggle ->
       State#st{toggle = (1 - State#st.toggle)};
 
-    {calc,WggT} -> ok;
-
+    {calc,WggT} ->
+      F = fun() -> %TODO
+        State
+      end,
+      inPhase(ready,F,State);
+      
     kill -> 
       log(Datei, koord, ["Terminating koordinator: ", KoordName]),
       Msg = killMe(KoordName, NameService),
@@ -79,6 +106,34 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
     _ -> 
       log(Datei, koord, ["New state: ", NewState]),
       loop(Cfg,KoordName,NameService,NewState,Datei)
+  end.
+
+lookupNeighbors([], _) -> throw("Ring should not be empty!");
+lookupNeighbors(Ring, N) -> 
+  I = string:str(Ring, [N]),
+  Ri = case I == length(Ring) of
+    true -> 1;
+    false -> I + 1
+  end,
+  Li = case I == 1 of
+    true -> length(Ring);
+    false -> I - 1
+  end,
+  {lists:nth(Li, Ring), lists:nth(Ri, Ring)}.
+
+
+% makeRing :: Set GGTname -> List GGTname
+makeRing(Set) -> werkzeug:shuffle(to_list(Set)).
+  
+% Zum Beispiel:
+% inPhase(ready,fun() -> 1 end,State);
+% Ruft die Funktion nur in einer bestimmten Phase auf.
+% Übernimmt den neuen Zustand, oder bleibt gleich.
+inPhase(Phase,Fun,State) ->
+  case State#st.phase of
+    Phase -> 
+      Fun();
+    _ -> State
   end.
 
 loadCfg() ->
@@ -104,6 +159,11 @@ loadCfg() ->
     toggle = Toggle
   }.
 
+% Beispiel
+% sendToGGTsByFunc(NameService, fun(GGTname) -> {setneighbors,..,,...}) end,Ring).
+sendToGGTsByFunc(NameService,Func,GGTring) ->
+  lists:map(fun(X) -> lookupAndSend(NameService,X,Func(X)) end,GGTring),
+  ok.
 
 sendToGGTs(NameService,Msg,GGTset) ->
   lists:map(fun(X) -> lookupAndSend(NameService,X,Msg) end,to_list(GGTset)),
@@ -112,5 +172,3 @@ sendToGGTs(NameService,Msg,GGTset) ->
 lookupAndSend(NameService,Name,Msg) ->
   PID = lookup(NameService,self(),Name),
   PID ! Msg.
-
-makeRing() -> 0.

@@ -9,7 +9,7 @@
 
 -record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
 
-start([StarterNrStr, _Start]) ->
+start([StarterNrStr]) ->
   StarterNr = list_to_integer(StarterNrStr),
   Cfg = loadCfg(),
   Datei = list_to_atom("log/ggt"++ to_String(StarterNr)++"@" ++ atom_to_list(node()) ++ ".log"),
