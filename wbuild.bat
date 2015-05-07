@@ -13,6 +13,7 @@ RD /S /Q log
 MD log
 
 del *.beam
+del nameservice@*.log 2>NUL
 
 erl -make
 
