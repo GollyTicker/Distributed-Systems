@@ -1,9 +1,10 @@
 -module(koordinator).
--export([start/0,lookupNeighbors/2]).
+-export([start/0]).
 
--import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
+-import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1,bestimme_mis/2,shuffle/1]).
 -import(utils,[log/3,lookup/3,connectToNameService/2,killMe/2]).
 
+-import(lists,[take/2,map/2,zipwith/3,nth/2,max/1]).
 -import(sets,[to_list/1,from_list/1,add_element/2]).
 
 -record(cfg, {worktime, termtime, ggtNo, nsnode, nsname, koordname, quota, toggle}).
@@ -25,11 +26,18 @@ start() ->
     ok -> log(Datei,koord,["Registered at nameservice: ",KoordName])
   end,
 
-  State = #st{toggle=Cfg#cfg.toggle},
+  State = initialState(Cfg,Datei),
   loop(Cfg,KoordName,NameService,State,Datei).
+
+initialState(Cfg,Datei) -> 
+  log(Datei,koord,["Now in initial State."]),
+  #st{toggle=Cfg#cfg.toggle}.
 
 loop(Cfg,KoordName,NameService,State,Datei) -> 
   NewState = receive 
+    
+    % Initialisierungsphase
+    
     {From,getsteeringval} -> 
       From ! {steeringval,Cfg#cfg.worktime,Cfg#cfg.termtime,Cfg#cfg.quota,Cfg#cfg.ggtNo},
       State;
@@ -42,19 +50,10 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       end,
       inPhase(initial,Func,State);
 
-    {briefmi,{GGTname,CMi,CZeit}} -> 
-      log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
-      State;
-
-    {From,briefterm,{GGTname,CMi,CZeit}} -> State;
-
-    reset -> State;
-
     step ->
-      %makeRing()
       F = fun() ->
         Ring = makeRing(State#st.ggtset),
-        log(Datei,koord,["Made Ring: ",Ring]),
+        log(Datei,koord,["Made Ring of size ",ggtCount(State),": ",Ring]),
         SetNeighbors = fun(GGTname) ->
           {Left,Right} = lookupNeighbors(Ring,GGTname),
           log(Datei,koord,["Set neighbors <",Left, ",", GGTname, ",",Right,">"]),
@@ -65,11 +64,41 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       end,
       inPhase(initial,F,State);
       
+    % Arbeitsphase
+      
+    {calc,WggT} ->
+      F = fun() ->
+        log(Datei,koord,["Received new calculation wish: ",WggT]),
+        [InitialY| Mis] = List = bestimme_mis(WggT,ggtCount(State) + 1),
+        SmallestMi = max(List) + 1,
+        NewState = State#st{wggt = WggT, smi = SmallestMi},
+        log(Datei,koord,["Mis: ",Mis]),
+        log(Datei,koord,["InitialY: ",InitialY," Initial SmallestMi: ",SmallestMi]),
+        % Fehler ab hier:
+        SetMiNeu = fun(GGTname,MiNeu) ->
+          lookupAndSend(NameService,GGTname,{setpm,MiNeu})
+        end,
+        zipwith(SetMiNeu,State#st.ggtring,Mis),
+        
+        InitialGGTs = pickInitialGGTs(State#st.ggtring),
+        log(Datei,koord,["InitialGGTs: ",InitialGGTs]),
+        sendToGGTsList(NameService,{sendy,InitialY},InitialGGTs),
+        
+        NewState
+      end,
+      inPhase(ready,F,State);
+      
+    {briefmi,{GGTname,CMi,CZeit}} -> 
+      log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
+      State;
 
+    {From,briefterm,{GGTname,CMi,CZeit}} -> State;
+
+    % Manuelle Kommandos
+    
     prompt -> 
       sendToGGTs(NameService,{self(),tellmi},State#st.ggtset),
       State;
-
     {mi, Mi} -> 
       log(Datei, koord, ["Mi: ", Mi]),
       State;
@@ -77,19 +106,12 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
     nudge -> 
       sendToGGTs(NameService,{self(),pingGGT},State#st.ggtset),
       State;
-
     {pongGGT, GGTname} -> 
       log(Datei, koord, ["Process ",GGTname, " alive."]),
       State;
 
     toggle ->
       State#st{toggle = (1 - State#st.toggle)};
-
-    {calc,WggT} ->
-      F = fun() -> %TODO
-        State
-      end,
-      inPhase(ready,F,State);
       
     kill -> 
       log(Datei, koord, ["Terminating koordinator: ", KoordName]),
@@ -98,15 +120,34 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       log(Datei, koord, ["Terminated with: ", Msg]),
       Msg;
 
+    reset ->
+      log(Datei, koord, ["Reset koordinator. Killing GGTs."]),
+      sendToGGTs(NameService,kill,State#st.ggtset),
+      initialState(Cfg,Datei);
+    
     Any -> 
       log(Datei, koord, ["Received unknown message: ", Any]), State
   end,
   case NewState of
     killed -> killed;
+    State -> loop(Cfg,KoordName,NameService,NewState,Datei);  % State didn't change
     _ -> 
       log(Datei, koord, ["New state: ", NewState]),
       loop(Cfg,KoordName,NameService,NewState,Datei)
   end.
+
+% ggtCount :: State -> Int
+ggtCount(State) -> sets:size(State#st.ggtset).
+
+% picks 20% of the GGTs, but at least 2 of them.
+pickInitialGGTs(L) -> take(percent(L), shuffle(L)).
+percent(L) -> 
+  P = round(length(L) * 0.2),
+  case P > 2 of
+    true -> P;
+    false -> 2
+  end.
+
 
 lookupNeighbors([], _) -> throw("Ring should not be empty!");
 lookupNeighbors(Ring, N) -> 
@@ -119,11 +160,11 @@ lookupNeighbors(Ring, N) ->
     true -> length(Ring);
     false -> I - 1
   end,
-  {lists:nth(Li, Ring), lists:nth(Ri, Ring)}.
+  {nth(Li, Ring), nth(Ri, Ring)}.
 
 
 % makeRing :: Set GGTname -> List GGTname
-makeRing(Set) -> werkzeug:shuffle(to_list(Set)).
+makeRing(Set) -> shuffle(to_list(Set)).
   
 % Zum Beispiel:
 % inPhase(ready,fun() -> 1 end,State);
@@ -162,13 +203,15 @@ loadCfg() ->
 % Beispiel
 % sendToGGTsByFunc(NameService, fun(GGTname) -> {setneighbors,..,,...}) end,Ring).
 sendToGGTsByFunc(NameService,Func,GGTring) ->
-  lists:map(fun(X) -> lookupAndSend(NameService,X,Func(X)) end,GGTring),
+  map(fun(X) -> lookupAndSend(NameService,X,Func(X)) end,GGTring),
   ok.
 
-sendToGGTs(NameService,Msg,GGTset) ->
-  lists:map(fun(X) -> lookupAndSend(NameService,X,Msg) end,to_list(GGTset)),
-  ok.
+sendToGGTs(NameService,Msg,GGTset) -> sendToGGTsList(NameService,Msg,to_list(GGTset)).
 
+sendToGGTsList(NameService,Msg,GGTlist) ->
+  map(fun(X) -> lookupAndSend(NameService,X,Msg) end,GGTlist),
+  ok.
+  
 lookupAndSend(NameService,Name,Msg) ->
   PID = lookup(NameService,self(),Name),
   PID ! Msg.

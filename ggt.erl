@@ -42,7 +42,7 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) ->
     {setneighbors,LeftName,RightName} -> 
       LeftID = lookup(NameService,self(),LeftName),
       RightID = lookup(NameService,self(),RightName),
-      log(Datei, GGTname, ["setneighbors l: ", LeftID, " r: ", RightID]),
+      log(Datei, GGTname, ["setneighbors l: ", LeftName, " r: ", RightName]),
       State#st{left = LeftID, right = RightID};
 
     {setpm,MiNeu} -> 
@@ -55,11 +55,11 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) ->
 
     {From,{vote,Initiator}} -> 
       
-      ok;
+      State;
 
     {voteYes,Name} -> 
       
-      ok;
+      State;
 
     {From,tellmi} -> 
       log(Datei, GGTname, ["tellmi ", From]),
@@ -83,6 +83,7 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) ->
   end,
   case NewState of
     killed -> killed;
+    State -> loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei);  % State didn't change
     _ -> 
       log(Datei, GGTname, ["New state: ", NewState]),
       loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei)
