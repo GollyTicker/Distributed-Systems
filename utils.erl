@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1, connectToNameService/2,lookup/3,killMe/2]).
+-export([log/3,randomInt/1, connectToNameService/2,lookup/3,killMe/2,sleepSeconds/1,seconds/1,sleepMillis/1,millis/1]).
 
 % Eine Datei mit den Utilities
 
@@ -39,7 +39,21 @@ lookup(NameService,Self,What) ->
     not_found -> not_found;
     {pin, PID} -> PID
   end.
+%
 
+% seconds(45.1) -> 45
+% Für Aufrufe auf Timer-Funktionen. Z.B. timer:sleep(seconds(12.1))
+seconds(S) -> millis(1000*S).
+%
+millis(M) -> 
+  M2 = case type_is(M) of
+      float -> round(M);
+      integer -> M
+  end,
+  max(0,M2).
+%
+sleepSeconds(S) ->  timer:sleep(seconds(S)).
+sleepMillis(S) ->  timer:sleep(millis(S)).
 
 killMe(Name, NameService) ->
   NameService ! {self(),{unbind,Name}},
