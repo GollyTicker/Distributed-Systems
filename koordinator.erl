@@ -139,7 +139,7 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
     killed -> killed;
     State -> loop(Cfg,KoordName,NameService,NewState,Datei);  % State didn't change
     _ -> 
-      log(Datei, koord, ["New state: ", NewState]),
+      % log(Datei, koord, ["New state: ", NewState]),
       loop(Cfg,KoordName,NameService,NewState,Datei)
   end.
 

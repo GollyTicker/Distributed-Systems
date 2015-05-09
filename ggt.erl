@@ -77,7 +77,7 @@ voteYesTimePassed(TermZeitSec,{MegaSec,Sec,MicroSec}) ->
 
 terminateVoting(St,Quota,GGTname,Datei) ->
   case St#st.votemode of
-    true -> log(Datei,GGTname,["  ## Voting ends with ",St#st.nvotes,"/",Quota," ##  "]);
+    true -> log(Datei,GGTname,["  #### Voting ends with ",St#st.nvotes,"/",Quota," ####"]);
     false -> ok
   end,
   St#st{votemode = false, nvotes = 0}.
@@ -125,7 +125,7 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
           NewSt2 = case Votes >= Q of
             true  ->
               St = terminateVoting(NewSt,Q,GGTname,Datei),
-              log(Datei,GGTname,[" ## Success with Mi = ",State#st.mi,"## "]),
+              log(Datei,GGTname,["  #### Success with Mi = ",State#st.mi,"####"]),
               KID ! {self(),briefterm,{GGTname,State#st.mi,now()}},
               St;
             false -> NewSt
@@ -169,12 +169,12 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
     killed -> killed;
     State -> loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei);  % State didn't change
     _ -> 
-      log(Datei, GGTname, ["New state: ", NewState]),
+      % log(Datei, GGTname, ["New state: ", NewState]),
       loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,NewState,Datei)
   end.
 %
 startVoting(NameService,GGTname,State,Datei) ->
-  log(Datei,GGTname,["  ## Initiate voting with Mi = ",State#st.mi,"##  "]),
+  log(Datei,GGTname,["  #### Initiate voting with Mi = ",State#st.mi,"####"]),
   NameService ! {self(),{multicast,vote,GGTname}},
   State#st{votemode = true, nvotes = 0}.
 %
