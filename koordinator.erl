@@ -12,6 +12,10 @@
 % phase is element of {initial, ready}
 
 start() ->
+  KID = spawn(fun() -> startKoordinator() end),
+  KID.
+
+startKoordinator() ->
   Cfg = loadCfg(),
   NSnode = Cfg#cfg.nsnode,
   NSname = Cfg#cfg.nsname,
@@ -140,7 +144,8 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
 ggtCount(State) -> sets:size(State#st.ggtset).
 
 % picks 20% of the GGTs, but at least 2 of them.
-pickInitialGGTs(L) -> take(percent(L), shuffle(L)).
+% take N from List is called the lists:sublist function in Erlang.
+pickInitialGGTs(L) -> lists:sublist(shuffle(L),percent(L)).
 percent(L) -> 
   P = round(length(L) * 0.2),
   case P > 2 of

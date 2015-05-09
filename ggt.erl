@@ -37,7 +37,6 @@ spawnggt(Cfg,NameService,GGTname,GGTnr,StarterNr,AZ,TZ,Q) ->
 
 
 loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) -> 
-  log(Datei,GGTname,["Ready ggt CFG teamnr: ",Cfg#cfg.teamnr]),   
   NewState = receive 
     {setneighbors,LeftName,RightName} -> 
       LeftID = lookup(NameService,self(),LeftName),
@@ -46,12 +45,12 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) ->
       State#st{left = LeftID, right = RightID};
 
     {setpm,MiNeu} -> 
-      log(Datei, GGTname, ["setpm ", MiNeu]),
+      log(Datei, GGTname, ["setpm: ", MiNeu]),
       State#st{mi = MiNeu};
 
     {sendy,Y} -> 
-      log(Datei, GGTname, ["sendy ", Y]),
-      sendY(State, Y);
+      log(Datei, GGTname, ["sendy: ", Y]),
+      sendY(State, Y, GGTname, Datei);
 
     {From,{vote,Initiator}} -> 
       
@@ -95,11 +94,12 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,State,Datei) ->
 %   send #Mi to all neighbours
 % fi 
 % State -> Int -> State
-sendY(State, Y) ->
+sendY(State, Y, GGTname, Datei) ->
   case Y < State#st.mi of
     true -> 
       NewMi = ((State#st.mi-1) rem Y)+1,
       NewState = State#st{mi = NewMi},
+      log(Datei, GGTname,["Update Mi: ", NewMi]),
       State#st.left ! {sendy, NewMi},
       State#st.right ! {sendy, NewMi},
       NewState;
