@@ -1,5 +1,10 @@
 -module(utils).
--export([log/3,randomInt/1, connectToNameService/2,lookup/3,killMe/2,sleepSeconds/1,seconds/1,sleepMillis/1,millis/1]).
+-export([
+    log/3,          randomInt/1, connectToNameService/2,
+    lookup/3,       killMe/2,
+    sleepSeconds/1, seconds/1,
+    sleepMillis/1,  millis/1   
+  ]).
 
 % Eine Datei mit den Utilities
 
@@ -52,8 +57,10 @@ millis(M) ->
   end,
   max(0,M2).
 %
+
 sleepSeconds(S) ->  timer:sleep(seconds(S)).
 sleepMillis(S) ->  timer:sleep(millis(S)).
+%
 
 killMe(Name, NameService) ->
   NameService ! {self(),{unbind,Name}},
@@ -62,3 +69,4 @@ killMe(Name, NameService) ->
     ok -> killed;
     Any -> Any 
   end.
+%
