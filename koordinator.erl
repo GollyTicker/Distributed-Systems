@@ -97,7 +97,7 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       State;
 
     {From,briefterm,{GGTname,CMi,CZeit}} ->
-      log(Datei,koord,["  ## ",GGTname," notes termination with Mi = ",CMi," at ",CZeit,"##"}),
+      log(Datei,koord,["  ## ",GGTname," notes termination with Mi = ",CMi," at ",CZeit,"##"]),
       % TODO:
       State;
 

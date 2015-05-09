@@ -68,16 +68,17 @@ initialized(S) ->
 % mindestens TermZeit/2-viele Sekunden vergangen sind.
 voteYesTimePassed(TermZeitSec,{MegaSec,Sec,MicroSec}) -> 
   LimitSec = TermZeitSec div 2,
-  CompareTS = {MegaSec,Sec+LimitSec,MicroSec}
+  CompareTS = {MegaSec,Sec+LimitSec,MicroSec},
   Now = now(),
-  case werkzeug:compareNow(CompareTS,now) of
-    before -> true
+  case werkzeug:compareNow(CompareTS,Now) of
+    before -> true;
     _ -> false
   end.
 
 terminateVoting(St,Quota,GGTname,Datei) ->
   case St#st.votemode of
-    true -> log(Datei,GGTname,["  ## Voting ends with ",St#st.nvotes,"/",Quota" ##  "])
+    true -> log(Datei,GGTname,["  ## Voting ends with ",St#st.nvotes,"/",Quota," ##  "]);
+    false -> ok
   end,
   St#st{votemode = false, nvotes = 0}.
 %
@@ -87,7 +88,7 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
    State = case Msg of
     {setpm,_} -> startTerminationReminder(TZ,StateBefore,Q,GGTname,Datei);
     {sendy,_} -> startTerminationReminder(TZ,StateBefore,Q,GGTname,Datei);
-    _ -> StateBeforeReminding
+    _ -> StateBefore
   end,
   NewState = case Msg of
     % Initialisierungsphase:
@@ -107,7 +108,7 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
       log(Datei, GGTname, ["sendy: ", Y]),
       sendY(State, Y, KID,AZ, GGTname, Datei);
 
-    {From,{vote,Initiator}} -> 
+    {From,{vote,_Initiator}} -> 
       % Aufgabenstellung - Punkt 22
       case voteYesTimePassed(TZ,State#st.lastactivity) of
         true  -> From ! {voteYes, GGTname};
@@ -123,7 +124,7 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
           NewSt = State#st{nvotes = Votes},
           NewSt2 = case Votes >= Q of
             true  ->
-              St = terminateVoting(NewSt,Quota,GGTname,Datei)
+              St = terminateVoting(NewSt,Q,GGTname,Datei),
               log(Datei,GGTname,[" ## Success with Mi = ",State#st.mi,"## "]),
               KID ! {self(),briefterm,{GGTname,State#st.mi,now()}},
               St;
@@ -173,8 +174,8 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
   end.
 %
 startVoting(NameService,GGTname,State,Datei) ->
-  log(Datei,GGTname,["  ## Initiate voting ##  "]),
-  NameService ! {self(),{multicast,vote,GGTname}}
+  log(Datei,GGTname,["  ## Initiate voting with Mi = ",State#st.mi,"##  "]),
+  NameService ! {self(),{multicast,vote,GGTname}},
   State#st{votemode = true, nvotes = 0}.
 %
 
