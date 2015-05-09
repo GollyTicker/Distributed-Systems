@@ -96,7 +96,10 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
       State;
 
-    {From,briefterm,{GGTname,CMi,CZeit}} -> State;
+    {From,briefterm,{GGTname,CMi,CZeit}} ->
+      log(Datei,koord,["  ## ",GGTname," notes termination with Mi = ",CMi," at ",CZeit,"##"}),
+      % TODO:
+      State;
 
     % Manuelle Kommandos
     
@@ -170,18 +173,19 @@ lookupNeighbors(Ring, N) ->
 
 % makeRing :: Set GGTname -> List GGTname
 makeRing(Set) -> shuffle(to_list(Set)).
-  
-% Zum Beispiel:
-% inPhase(ready,fun() -> 1 end,State);
+%
+
 % Ruft die Funktion nur in einer bestimmten Phase auf.
-% Übernimmt den neuen Zustand, oder bleibt gleich.
+% Übernimmt in der richtigen Phase den neuen Zustand.
+% Sonst wird der alte Zustand beibehalten.
+% z.b. inPhase(ready,fun() -> doStuff() end,State)
 inPhase(Phase,Fun,State) ->
   case State#st.phase of
     Phase -> 
       Fun();
     _ -> State
   end.
-
+%
 loadCfg() ->
   {ok, ConfigList} = file:consult("koordinator.cfg"),
   {ok, WorkTime} = get_config_value(arbeitszeit, ConfigList),
