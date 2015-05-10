@@ -1,16 +1,32 @@
 
 In ggt.cfg und koordinator.cfg den Nameservice Node aktualisieren.
 
+Windows:
 wbuild.bat
 
-werl -setcookie a -name nameservice -run nameservice start
+werl -setcookie vs -name nameservice -run nameservice start
 
-werl -setcookie a -name koordinator
+werl -setcookie vs -name koordinator
   > K = koordinator:start().
   ...
   > K ! step.
   > K ! CMD.
 
-werl -setcookie a -name starter
+werl -setcookie vs -name starter
   > starter:start(0).
+
+
+Linux:
+./build.sh
+
+erl -name nameservice -setcookie vs -run nameservice start
+
+erl -name koordinator -setcookie vs
+  > K = koordinator:start().
+  ...
+  > K ! step.
+  > K ! CMD.
+
+erl -name starter -setcookie vs
+  > starter:start(9).
 

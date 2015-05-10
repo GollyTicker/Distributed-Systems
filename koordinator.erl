@@ -94,12 +94,10 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       
     {briefmi,{GGTname,CMi,CZeit}} -> 
       log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
-      State;
+      State#st{smi = lists:min(State#st.smi, CMi)};
 
     {From,briefterm,{GGTname,CMi,CZeit}} ->
-      log(Datei,koord,["  ## ",GGTname," notes termination with Mi = ",CMi," at ",CZeit,"##"]),
-      % TODO:
-      State;
+      briefTerm(Cfg, NameService, State, From, GGTname, CMi, CZeit, Datei);
 
     % Manuelle Kommandos
     
@@ -142,6 +140,35 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       % log(Datei, koord, ["New state: ", NewState]),
       loop(Cfg,KoordName,NameService,NewState,Datei)
   end.
+
+
+briefTerm(Cfg, NameService, State, From, GGTname,CMi,CZeit, Datei) ->
+  CurrentMi = case State#st.smi of
+    undefined -> CMi;
+    _ -> State#st.smi
+  end,
+
+  MiIsValid = CurrentMi >= CMi,
+  NewState = case MiIsValid of
+    true -> 
+      backToInitial(Cfg, NameService, State, GGTname, CMi, CZeit, Datei);
+    false ->  
+      case State#st.toggle of
+        0 -> 
+          backToInitial(Cfg, NameService, State, GGTname, CMi, CZeit, Datei);
+        1 ->
+          log(Datei,koord,["  ## ",GGTname," noted termination with a wrong Mi = ",CMi," at ",CZeit,"##"]),
+          From ! {sendy, State#st.smi},
+          State
+      end
+  end,
+  NewState.
+
+backToInitial(Cfg, NameService, State, GGTname, CMi, CZeit, Datei) ->
+  log(Datei,koord,["  ## ",GGTname," notes termination with Mi = ",CMi," at ",CZeit,"##"]),
+  sendToGGTs(NameService,kill,State#st.ggtset),
+  initialState(Cfg,Datei).
+
 
 % ggtCount :: State -> Int
 ggtCount(State) -> sets:size(State#st.ggtset).
