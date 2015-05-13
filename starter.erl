@@ -1,5 +1,5 @@
 -module(starter).
--export([start/1]).
+-export([start/1,startM/2]).
 
 -import(werkzeug,[timeMilliSecond/0,get_config_value/2,to_String/1]).
 -import(utils,[log/3, connectToNameService/2,lookup/3]).
@@ -8,6 +8,10 @@
 % {steeringval,ArbeitsZeit,TermZeit,Quota,GGTProzessnummer}: die steuernden Werte für die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Verzögerungszeit zur Berechnung in Sekunden, TermZeit ist die Wartezeit in Sekunden, bis eine Wahl für eine Terminierung initiiert wird, Quota ist die konkrete Anzahl an benotwendigten Zustimmungen zu einer Terminierungsabstimmung und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.
 
 -record(cfg, {pgruppe, teamnr, nsnode, nsname, koordname}).
+
+startM(_,0) -> ok;
+startM(StarterNr,Many) -> spawn(fun() -> start(StarterNr) end), startM(StarterNr+1,Many-1).
+
 
 start(StarterNr) ->
   Cfg = loadCfg(),

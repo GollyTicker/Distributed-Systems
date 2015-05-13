@@ -8,7 +8,7 @@
 -import(sets,[to_list/1,from_list/1,add_element/2]).
 
 -record(cfg, {worktime, termtime, ggtNo, nsnode, nsname, koordname, quota, toggle}).
--record(st, {phase=initial, wggt=undefined, smi=undefined, ggtset=sets:new(),ggtring=[],toggle=0}).
+-record(st, {phase=initial, wggt=undefined, smi=undefined, ggtset=sets:new(),ggtring=[],toggle=0,nudgecounter=0}).
 % phase is element of {initial, ready}
 
 start() ->
@@ -52,7 +52,7 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
         log(Datei,koord,["Adding new GGT: ",GGTname]),
         State#st{ggtset = NewSet}
       end,
-      inPhase(initial,Func,State);
+      inPhase(initial,Func,State,["Rejected GGT: ",GGTname," registered too late."],Datei);
 
     step ->
       F = fun() ->
@@ -66,7 +66,7 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
         sendToGGTsByFunc(NameService, SetNeighbors,Ring),
         State#st{phase=ready,ggtring=Ring}
       end,
-      inPhase(initial,F,State);
+      inPhase(initial,F,State,["Already stepped. I am all ready. Ignored."],Datei);
       
     % Arbeitsphase
       
@@ -90,14 +90,23 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
         
         NewState
       end,
-      inPhase(ready,F,State);
+      inPhase(ready,F,State,["Call step, before calc. Ignored."],Datei);
       
     {briefmi,{GGTname,CMi,CZeit}} -> 
-      log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
-      State#st{smi = min(State#st.smi, CMi)};
+      F = fun() ->
+        log(Datei,koord,["briefmi: ",GGTname,", ",CMi,", ",CZeit]),
+        State#st{smi = min(State#st.smi, CMi)}
+      end,
+      inPhase(ready,F,State,["Unexpected briefmi by ",GGTname,", Mi = ",CMi,". Ignored."],Datei);
 
     {From,briefterm,{GGTname,CMi,CZeit}} ->
-      briefTerm(Cfg, State, From, GGTname, CMi, CZeit, Datei);
+      F = fun() ->
+        briefTerm(State, From, GGTname, CMi, CZeit, Datei)
+      end,
+      inPhase(ready,F,State,["Unexpected briefterm by ",GGTname,", Mi = ",CMi,". Ignored."],Datei);
+
+    {_From,{vote,_GGTName}} ->  % ignorieren de multicast-votes
+      State;
 
     % Manuelle Kommandos
     
@@ -109,11 +118,13 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       State;
 
     nudge -> 
-      sendToGGTs(NameService,{self(),pingGGT},State#st.ggtset),
-      State;
+      sendToGGTs(NameService,{self(),pingGGT},State#st.ggtset), % responses zählen.
+      State#st{nudgecounter = 0};
     {pongGGT, GGTname} -> 
-      log(Datei, koord, ["Process ",GGTname, " alive."]),
-      State;
+      NewCounter = State#st.nudgecounter + 1,
+      Total = sets:size(State#st.ggtset),
+      log(Datei, koord, ["Process ",GGTname, " alive. ",NewCounter,"/",Total," responded."]),
+      State#st{nudgecounter = NewCounter};
 
     toggle ->
       State#st{toggle = (1 - State#st.toggle)};
@@ -142,7 +153,7 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
   end.
 
 
-briefTerm(Cfg, State, From, GGTname,CMi,CZeit, Datei) ->
+briefTerm(State, From, GGTname,CMi,CZeit, Datei) ->
   CurrentMi = case State#st.smi of
     undefined -> CMi;
     _ -> State#st.smi
@@ -151,22 +162,19 @@ briefTerm(Cfg, State, From, GGTname,CMi,CZeit, Datei) ->
   MiIsValid = CurrentMi >= CMi,
   NewState = case MiIsValid of
     true -> 
-      backToInitial(Cfg, GGTname, CMi, CZeit, Datei);
-    false ->  
+      log(Datei,koord,["  ## SUCCESS ",GGTname," notes termination with Mi = ",CMi," at ",CZeit," ##"]),
+      State;
+    false ->
+      log(Datei,koord,["  ## FAILURE ",GGTname," noted termination with a wrong Mi = ",CMi," at ",CZeit," ##"]),
       case State#st.toggle of
         0 -> 
-          backToInitial(Cfg, GGTname, CMi, CZeit, Datei);
+          State;
         1 ->
-          log(Datei,koord,["  ## ",GGTname," noted termination with a wrong Mi = ",CMi," at ",CZeit,"##"]),
           From ! {sendy, State#st.smi},
           State
       end
   end,
   NewState.
-
-backToInitial(Cfg, GGTname, CMi, CZeit, Datei) ->
-  log(Datei,koord,["  ## ",GGTname," notes termination with Mi = ",CMi," at ",CZeit,"##"]),
-  initialState(Cfg,Datei).
 
 
 % ggtCount :: State -> Int
@@ -205,11 +213,13 @@ makeRing(Set) -> shuffle(to_list(Set)).
 % Übernimmt in der richtigen Phase den neuen Zustand.
 % Sonst wird der alte Zustand beibehalten.
 % z.b. inPhase(ready,fun() -> doStuff() end,State)
-inPhase(Phase,Fun,State) ->
+inPhase(Phase,Fun,State,WrongPhaseMsg,Datei) ->
   case State#st.phase of
     Phase -> 
       Fun();
-    _ -> State
+    _Wrong ->
+      log(Datei,koord,WrongPhaseMsg),
+      State
   end.
 %
 loadCfg() ->
