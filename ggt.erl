@@ -145,10 +145,9 @@ loop(Cfg,NameService,GGTname,GGTnr,StarterNr,KID,AZ,TZ,Q,StateBefore,Datei) ->
     % Terminierungsphase:
     
     kill -> 
-      log(Datei, GGTname, ["terminating ggt: ", GGTname]),
-      Msg = killMe(GGTname, NameService),
-      log(Datei, GGTname, ["terminated with: ", Msg]),
-      Msg;
+      killMe(GGTname, NameService),
+      log(Datei, GGTname, ["terminated."]),
+      killed;
     
     % Meta-kommandos vom Koordinator:
     

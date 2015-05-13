@@ -19,14 +19,14 @@ werl -setcookie vs -name starter
 Linux:
 ./build.sh
 
-erl -name nameservice -setcookie vs -run nameservice start
+erl -name nameservice -setcookie vsp -run nameservice start
 
-erl -name koordinator -setcookie vs
+erl -name koordinator -setcookie vsp
   > K = koordinator:start().
   ...
   > K ! step.
   > K ! CMD.
 
-erl -name starter -setcookie vs
+erl -name starter -setcookie vsp
   > starter:start(9).
 

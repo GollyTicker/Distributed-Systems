@@ -64,9 +64,5 @@ sleepMillis(S) ->  timer:sleep(millis(S)).
 
 killMe(Name, NameService) ->
   NameService ! {self(),{unbind,Name}},
-  unregister(Name),
-  receive
-    ok -> killed;
-    Any -> Any 
-  end.
+  unregister(Name).
 %

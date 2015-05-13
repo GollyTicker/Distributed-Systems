@@ -8,7 +8,7 @@
 -import(sets,[to_list/1,from_list/1,add_element/2]).
 
 -record(cfg, {worktime, termtime, ggtNo, nsnode, nsname, koordname, quota, toggle}).
--record(st, {phase=initial, wggt=undefined, smi=undefined, ggtset=sets:new(),ggtring=[],toggle=0,nudgecounter=0}).
+-record(st, {phase=initial, wggt=undefined, smi=undefined, ggtset=sets:new(),ggtring=[],toggle=0,nudgecounter=0,nstarter=0}).
 % phase is element of {initial, ready}
 
 start() ->
@@ -42,9 +42,13 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
     
     % Initialisierungsphase
     
-    {From,getsteeringval} -> 
-      From ! {steeringval,Cfg#cfg.worktime,Cfg#cfg.termtime,Cfg#cfg.quota,Cfg#cfg.ggtNo},
-      State;
+    {From,getsteeringval} ->
+      NewNStarter = State#st.nstarter + 1,
+      NewSt = State#st{nstarter = NewNStarter},
+      ThisQuota = trunc(NewNStarter*Cfg#cfg.ggtNo*Cfg#cfg.quota/100),
+      log(Datei,koord,["Sent steeringval with Quota: ",ThisQuota]),
+      From ! {steeringval,Cfg#cfg.worktime,Cfg#cfg.termtime,ThisQuota,Cfg#cfg.ggtNo},
+      NewSt;
 
     {hello,GGTname} ->
       Func = fun() -> 
@@ -74,7 +78,7 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       F = fun() ->
         log(Datei,koord,["Received new calculation wish: ",WggT]),
         [InitialY| Mis] = List = bestimme_mis(WggT,ggtCount(State) + 1),
-        SmallestMi = max(List) + 1,
+        SmallestMi = max(List),
         NewState = State#st{wggt = WggT, smi = SmallestMi},
         log(Datei,koord,["Mis: ",Mis]),
         log(Datei,koord,["InitialY: ",InitialY," Initial SmallestMi: ",SmallestMi]),
@@ -130,11 +134,10 @@ loop(Cfg,KoordName,NameService,State,Datei) ->
       State#st{toggle = (1 - State#st.toggle)};
       
     kill -> 
-      log(Datei, koord, ["Terminating koordinator: ", KoordName]),
-      Msg = killMe(KoordName, NameService),
+      killMe(KoordName, NameService),
       sendToGGTs(NameService,kill,State#st.ggtset),
-      log(Datei, koord, ["Terminated with: ", Msg]),
-      Msg;
+      log(Datei, koord, ["Terminatied ", KoordName]),
+      killed;
 
     reset ->
       log(Datei, koord, ["Reset koordinator. Killing GGTs."]),
