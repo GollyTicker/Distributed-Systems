@@ -1,0 +1,13 @@
+module ggt{
+    interface unit{
+        /* initial */
+        long setneighbors(in long pidleft, in long pidright);
+        oneway void setpm(in long pm);
+        /* rechnen */
+        oneway void sendy(in long y);
+        oneway void query();
+        oneway void response(in long y);
+        /* beenden */
+        oneway void close( );
+    };
+};

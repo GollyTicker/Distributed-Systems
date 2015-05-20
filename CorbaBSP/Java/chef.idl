@@ -1,0 +1,12 @@
+module chef{
+    interface koordinator{
+        /* initial */
+        long getsteeringval(out long pnum, out long wtime,out long term);
+        long hello(in long pid);
+        /* bereit */
+        oneway void brief(in long pid, in long pm, in long ptime);
+        oneway void terminated(in long pid, in long ggt, in long ptime);
+        /* beenden */
+        oneway void closed(in long pid, in long pm, in long ptime);
+    };
+};
