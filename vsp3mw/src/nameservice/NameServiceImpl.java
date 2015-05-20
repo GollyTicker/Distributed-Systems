@@ -2,25 +2,44 @@ package nameservice;
 
 import mware_lib.NameService;
 
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Created by sacry on 20/05/15.
  */
 public class NameServiceImpl extends NameService{
 
     private int port;
+    private Map<String, Object> register;
 
-    public NameServiceImpl(int port){
+    // TODO: mit echten ports arbeiten.
+
+    public static void main(String[] args) throws UnknownHostException {
+        System.out.println("Started Nameservice.");
+        NameService ns = new NameServiceImpl(Integer.parseInt(args[0]));
+
+        String bla = "my object";
+        ns.rebind(bla, "hallo");
+
+        Object result = ns.resolve("hallo");
+        System.out.println("Result: " +result);
+    }
+
+    public NameServiceImpl(int port) throws UnknownHostException {
         this.port = port;
-    };
-
-    @Override
-    public void rebind(Object servant, String name) {
-
+        register = new HashMap();
     }
 
     @Override
-    public Object resolve(String name) {
-        return null;
+    public void rebind(Object servant, String name) {
+        register.put(name, servant);
+    }
+
+    @Override
+    public Object resolve(String name) {    // null als Rückgabewert ist erlaubt
+        return register.get(name);
     }
 
 }
