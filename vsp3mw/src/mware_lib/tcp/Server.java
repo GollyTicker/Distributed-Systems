@@ -11,7 +11,6 @@ public class Server {
 	
 	public Server(int listenPort) throws IOException {
 		MySvrSocket = new ServerSocket(listenPort);
-
 	}
 	
 	public Connection getConnection() throws IOException {

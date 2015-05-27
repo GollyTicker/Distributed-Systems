@@ -3,7 +3,6 @@ package application;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import sun.jvmstat.perfdata.monitor.PerfStringMonitor;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -13,13 +12,6 @@ import java.util.Map;
  * Created by Swaneet on 27.05.2015.
  */
 public class Main {
-//    ObjectBroker objBroker = ObjectBroker.init(host, port, false);
-//    NameService nameSvc = objBroker.getNameService();
-//    nameSvc.rebind((Object) myObject, �zumsel�);
-//
-//    objBroker.shutDown();
-
-    // Ebenso Client Code.
     public static void main(String[] args) {
         Gson gson = new GsonBuilder()
                 .disableHtmlEscaping()
