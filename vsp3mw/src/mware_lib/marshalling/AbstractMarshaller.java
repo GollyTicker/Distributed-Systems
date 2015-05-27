@@ -12,7 +12,6 @@ public abstract class AbstractMarshaller {
     public static Gson gson = new GsonBuilder()
                 .disableHtmlEscaping()
                 .setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE)
-                .setPrettyPrinting()
                 .serializeNulls()
                 .create();
 
