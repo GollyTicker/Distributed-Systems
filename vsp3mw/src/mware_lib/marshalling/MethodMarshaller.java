@@ -1,6 +1,6 @@
 package mware_lib.marshalling;
 
-import com.sun.xml.internal.ws.handler.ClientMessageHandlerTube;
+import mware_lib.model.Method;
 
 /**
  * Created by sacry on 27/05/15.

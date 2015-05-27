@@ -1,11 +1,11 @@
-package mware_lib.marshalling;
+package mware_lib.model;
 
 import java.util.Arrays;
 
 /**
  * Created by sacry on 27/05/15.
  */
-public class Method extends AbstractModel{
+public class Method extends AbstractModel {
 
     public static Method init(String objectReference, String methodName, Object[] methodParameter){
         return new Method(objectReference, methodName, methodParameter);
@@ -21,21 +21,7 @@ public class Method extends AbstractModel{
         this.methodParameter = methodParameter;
         this.messageType = "Method";
     }
-
-    public void setObjectReference(String objectReference) {
-        this.objectReference = objectReference;
-    }
-
-    public void setMethodName(String methodName) {
-        this.methodName = methodName;
-    }
-
-    public void setMethodParameter(Object[] methodParameter) {
-        this.methodParameter = methodParameter;
-    }
-
     public String getObjectReference() {
-
         return objectReference;
     }
 

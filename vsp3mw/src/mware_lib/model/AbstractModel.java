@@ -1,4 +1,4 @@
-package mware_lib.marshalling;
+package mware_lib.model;
 
 /**
  * Created by sacry on 27/05/15.

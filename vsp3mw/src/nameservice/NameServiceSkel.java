@@ -1,6 +1,8 @@
 package nameservice;
 
-import mware_lib.proxying.AbstractSkeleton;
+import mware_lib.model.Method;
+import mware_lib.marshalling.MethodMarshaller;
+import mware_lib.skeleton.AbstractSkeleton;
 import mware_lib.tcp.Connection;
 
 import java.io.IOException;
@@ -17,5 +19,12 @@ public class NameServiceSkel extends AbstractSkeleton {
     @Override
     public void runClient(Connection c) throws IOException {
         String req = c.receive();
+        Method m = MethodMarshaller.unmarshall(req, Method.class);
+
+        if(m.getMethodName() == "rebind") {
+            // m.ge
+        }
+
+
     }
 }

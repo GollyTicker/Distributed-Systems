@@ -1,4 +1,4 @@
-package mware_lib.proxying;
+package mware_lib.skeleton;
 
 import mware_lib.tcp.Connection;
 import mware_lib.tcp.Server;
