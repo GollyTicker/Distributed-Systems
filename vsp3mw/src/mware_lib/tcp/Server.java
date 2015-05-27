@@ -1,13 +1,17 @@
 package mware_lib.tcp;
 
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.HashMap;
 
 public class Server {
 	private ServerSocket MySvrSocket;
 	
 	public Server(int listenPort) throws IOException {
-		MySvrSocket = new ServerSocket(listenPort);		
+		MySvrSocket = new ServerSocket(listenPort);
+
 	}
 	
 	public Connection getConnection() throws IOException {
