@@ -3,7 +3,6 @@ package mware_lib.marshalling;
 import accessor_one.SomeException110;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,25 +61,6 @@ public class MethodMarshaller {
             accu.add(AppObjectMarshaller.marshall(params[idx]));
         }
         return "[" + String.join(PARAMS_SEP, accu) + "]";
-    }
-
-    private static class Method {
-
-        public String methodName;
-        public Object[] params;
-
-        public Method(String methodName, Object[] params) {
-            this.methodName = methodName;
-            this.params = params;
-        }
-
-        @Override
-        public String toString() {
-            return "Method{" +
-                    "methodName='" + methodName + '\'' +
-                    ", params=" + Arrays.toString(params) +
-                    '}';
-        }
     }
 
     public static void main(String[] args) throws Exception {

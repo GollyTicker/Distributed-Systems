@@ -39,6 +39,11 @@ public class ErrorMarshaller {
         }
     }
 
+    public static boolean isException(String val){
+        return val.startsWith(EXCEPTION);
+    }
+
+
     public static void main(String[] args) throws Exception {
         ArrayList<Object> objs = new ArrayList<>(
                 Arrays.asList(

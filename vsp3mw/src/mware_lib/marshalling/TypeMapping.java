@@ -13,7 +13,7 @@ public class TypeMapping {
     private static Map<Class<?>, String> typeMapping = new HashMap<>();
     private static Map<String, Class<?>> inverseTypeMapping = new HashMap<>();
 
-    final static Object VOID = "void";
+    public final static Object VOID = "void";
 
     static {
         // + Exceptions mit einem oder keinem String-Argument im Construktor und die ein ":" im .toString enthalten.

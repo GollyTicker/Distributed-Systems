@@ -33,7 +33,6 @@ public class NameServiceImpl extends NameService{
     public NameServiceImpl(int port) throws IOException {
         this.port = port;
         register = new HashMap();
-        // Skeleton...: Server s = new Server(port);
     }
 
     @Override
@@ -42,7 +41,7 @@ public class NameServiceImpl extends NameService{
     }
 
     @Override
-    public Object resolve(String name) {    // null als Rückgabewert ist erlaubt
+    public Object resolve(String name) {    // null als Rï¿½ckgabewert ist erlaubt
         return register.get(name);
     }
 

@@ -33,6 +33,10 @@ public class ReturnMarshaller {
         }
     }
 
+    public static boolean isReturn(String val){
+        return val.startsWith(RETURN);
+    }
+
     public static void main(String[] args) {
 
     }
