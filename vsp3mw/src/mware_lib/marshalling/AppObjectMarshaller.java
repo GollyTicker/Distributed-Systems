@@ -5,14 +5,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import static mware_lib.Utils.checkPre;
-import static mware_lib.marshalling.Marshaller.*;
 
 /**
  * Created by Swaneet on 27.05.2015.
  */
 public class AppObjectMarshaller {
 
-    static String APPOBJECT = "appobject";
+    private static String SEP = ";";
+
+    private static String APPOBJECT = "appobject";
     // "AppObject;$type;$objString"
 
     public static String marshall(Object o) throws MarshallingException {
@@ -28,11 +29,11 @@ public class AppObjectMarshaller {
 
     public static Object demarshall(String a) throws DemarshallingException {
         try {
-            ArrayList<String> strs = split(a);
-            String appObject = strs.get(0);
+            String[] strs = a.split(SEP);
+            String appObject = strs[0];
             checkPre(appObject.equals(APPOBJECT),"AppObject expected, but got: " + appObject);
-            String type = strs.get(1);
-            String objStr = strs.size() > 2 ? strs.get(2) : "";
+            String type = strs[1];
+            String objStr = strs.length > 2 ? strs[2] : "";
             Class<?> cls = TypeMapping.getType(type);
             return TypeMapping.fromString(objStr, cls);
         } catch (Exception e) {
