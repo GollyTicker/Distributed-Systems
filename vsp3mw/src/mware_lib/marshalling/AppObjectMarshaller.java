@@ -42,7 +42,6 @@ public class AppObjectMarshaller {
     }
 
 
-
     public static void main(String[] args) throws Exception {
         ArrayList<Object> objs = new ArrayList<>(
                 Arrays.asList("myStr", "", new Integer(5), new Double(5), null,
