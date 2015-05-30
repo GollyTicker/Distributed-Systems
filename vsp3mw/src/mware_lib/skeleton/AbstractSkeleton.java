@@ -1,5 +1,6 @@
 package mware_lib.skeleton;
 
+import mware_lib.marshalling.MethodMarshaller;
 import mware_lib.tcp.Connection;
 import mware_lib.tcp.Server;
 import mware_lib.tcp.ThreadedServer;
@@ -26,4 +27,10 @@ public abstract class AbstractSkeleton {
     }
 
     public abstract void runClient(Connection c) throws IOException;
+
+    // void a(String, int)
+    // int b(double)
+    public void doMethod(String s) {
+        //
+    }
 }
