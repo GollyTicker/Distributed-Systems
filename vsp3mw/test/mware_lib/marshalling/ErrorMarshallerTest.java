@@ -44,6 +44,12 @@ public class ErrorMarshallerTest {
     }
 
     @Test
+    public void printNameTest()
+    {
+        System.out.println("ErrorMarshallerTest");
+    }
+
+    @Test
     public void testMarshall() throws Exception {
         assertEquals(exception110Marshalled, ErrorMarshaller.marshall(exception110));
         assertEquals(arrayIndexOutOfBoundsExceptionMarshalled, ErrorMarshaller.marshall(arrayIndexOutOfBoundsException));

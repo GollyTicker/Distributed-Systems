@@ -68,6 +68,12 @@ public class AppObjectMarshallerTest {
     }
 
     @Test
+    public void printNameTest()
+    {
+        System.out.println("AppObjectMarshallerTest");
+    }
+
+    @Test
     public void testMarshall() throws Exception {
         assertEquals(someStringMarshalled, AppObjectMarshaller.marshall(someString));
         assertEquals(emptyStringMarshalled, AppObjectMarshaller.marshall(emptyString));

@@ -36,6 +36,11 @@ public class TypeMappingTest {
     }
 
     @Test
+    public void printNameTest() {
+        System.out.println("TypingObjectTest");
+    }
+
+    @Test
     public void testGetType() throws Exception {
         assertEquals(someString.getClass(), TypeMapping.getType(someStringType));
         assertEquals(someInt.getClass(), TypeMapping.getType(someIntType));

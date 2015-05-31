@@ -43,6 +43,12 @@ public class MethodMarshallerTest {
     }
 
     @Test
+    public void printNameTest()
+    {
+        System.out.println("MethodMarshallerTest");
+    }
+
+    @Test
     public void testMarshall() throws Exception {
         assertEquals(methodWithParamsMarshalled, MethodMarshaller.marshall(methodWithParams));
         assertEquals(methodWithExceptionMarshalled, MethodMarshaller.marshall(methodWithException));

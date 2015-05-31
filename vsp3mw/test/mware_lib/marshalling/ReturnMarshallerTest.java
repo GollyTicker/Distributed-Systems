@@ -41,6 +41,12 @@ public class ReturnMarshallerTest {
     }
 
     @Test
+    public void printNameTest()
+    {
+        System.out.println("ReturnMarshallerTest");
+    }
+
+    @Test
     public void testMarshall() throws Exception {
         assertEquals(someStringMarshalled, ReturnMarshaller.marshall(someString));
         assertEquals(emptyStringMarshalled, ReturnMarshaller.marshall(emptyString));
