@@ -7,6 +7,8 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 
 public class Server {
+	private static int port = 51000 - 1;
+
 	private ServerSocket MySvrSocket;
 	
 	public Server(int listenPort) throws IOException {
@@ -19,6 +21,11 @@ public class Server {
 	
 	public void shutdown() throws IOException {
 		MySvrSocket.close();
+	}
+
+	public static int newPort() {
+		port++;
+		return port;
 	}
 
 	/**

@@ -2,12 +2,7 @@ package mware_lib;
 
 import mware_lib.marshalling.*;
 import mware_lib.tcp.Client;
-import mware_lib.tcp.Connection;
-import mware_lib.tcp.Server;
-
 import java.io.IOException;
-
-import static mware_lib.Utils.checkPre;
 import static mware_lib.Logger.*;
 /**
  * Created by sacry on 30/05/15.
