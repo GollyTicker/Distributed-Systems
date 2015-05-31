@@ -9,6 +9,6 @@ import accessor_one.SomeException112;
 public class AccessorOneClassOne extends ClassOneImplBase {
     @Override
     public String methodOne(String param1, int param2) throws SomeException112 {
-        return null;
+        return String.valueOf(Integer.parseInt(param1) - param2);
     }
 }

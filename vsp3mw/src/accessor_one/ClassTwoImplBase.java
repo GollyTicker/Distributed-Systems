@@ -9,6 +9,6 @@ public abstract class ClassTwoImplBase {
     public abstract double methodTwo() throws SomeException112;
 
     public static ClassTwoImplBase narrowCast(Object rawObjectRef) {
-        return null;
+        return (ClassTwoImplBase) rawObjectRef;
     }
 }

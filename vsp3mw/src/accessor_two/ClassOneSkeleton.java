@@ -11,8 +11,6 @@ import java.util.List;
 
 import static accessor_two.ClassOneProxy.METHODONE;
 import static accessor_two.ClassOneProxy.METHODTWO;
-import static mware_lib.Logger.log;
-import static mware_lib.Utils.checkPre;
 
 /**
  * Created by sacry on 30/05/15.

@@ -31,9 +31,12 @@ public class NameServiceProxy extends NameService {
     public void rebind(Object servant, String name) {
         try {
             log(this,"NameServiceProxy.rebind(" + servant + "," + name + ")");
+
             String objectReference = ReferenceService.createSkeleton(servant,name);
+
             Method method = new Method(REBIND, new Object[]{objectReference, name});
             String response = RemoteMethodInvocation.remoteMethodInvocation(method, this.host, this.port);
+
 
             if (ReturnMarshaller.isReturn(response)) {
                 ReturnMarshaller.demarshall(response);
@@ -52,6 +55,7 @@ public class NameServiceProxy extends NameService {
             Method method = new Method(RESOLVE, new Object[]{name});
             String response = RemoteMethodInvocation.remoteMethodInvocation(method, this.host, this.port);
 
+            log(this, "NameServiceProxy resolved:" + name + " -> " + response);
             if (ReturnMarshaller.isReturn(response)) {
                 String objectReference = (String) ReturnMarshaller.demarshall(response);
                 Object objProxy = ReferenceService.createProxy(objectReference);

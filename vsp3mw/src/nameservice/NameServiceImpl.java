@@ -28,6 +28,7 @@ public class NameServiceImpl extends NameService {
     @Override
     public Object resolve(String name) {    // null als Rückgabewert ist erlaubt
         log(this, "NameService.resolve("+ name + ")");
+        log(this, register.get(name));
         return register.get(name);
     }
 

@@ -10,11 +10,11 @@ import accessor_one.SomeException112;
 public class AccessorOneClassTwo extends ClassTwoImplBase {
     @Override
     public int methodOne(double param1) throws SomeException110 {
-        return 0;
+        return 10;
     }
 
     @Override
     public double methodTwo() throws SomeException112 {
-        return 0;
+        return 42.0;
     }
 }
