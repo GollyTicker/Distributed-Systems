@@ -8,7 +8,7 @@ import mware_lib.tcp.Server;
 import java.io.IOException;
 
 import static mware_lib.Utils.checkPre;
-
+import static mware_lib.Logger.*;
 /**
  * Created by sacry on 30/05/15.
  */
@@ -33,8 +33,8 @@ public class NameServiceProxy extends NameService {
     @Override
     public void rebind(Object servant, String name) {
         try {
+            log(this,"NameServiceProxy.rebind(" + servant + "," + name + ")");
             Client client = new Client(this.host, this.port);
-
             String rebindMethod = MethodMarshaller.marshall(REBIND, new Object[]{servant, name});
             client.send(rebindMethod);
             String response = client.receive();
@@ -54,6 +54,7 @@ public class NameServiceProxy extends NameService {
     @Override
     public Object resolve(String name) {
         try {
+            log(this,"NameServiceProxy.resolve("+ name + ")");
             Client client = new Client(this.host, this.port);
             String rebindMethod = MethodMarshaller.marshall(RESOLVE, new Object[]{name});
             client.send(rebindMethod);

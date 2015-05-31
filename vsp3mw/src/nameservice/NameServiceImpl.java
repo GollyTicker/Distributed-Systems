@@ -1,5 +1,6 @@
 package nameservice;
 
+import mware_lib.Logger;
 import mware_lib.NameService;
 
 import java.io.IOException;
@@ -8,40 +9,27 @@ import java.util.HashMap;
 import java.util.Map;
 import mware_lib.tcp.*;
 
+import static mware_lib.Logger.log;
+
 /**
  * Created by sacry on 20/05/15.
  */
-public class NameServiceImpl extends NameService{
-
-    private int port;
+public class NameServiceImpl extends NameService {
     private Map<String, Object> register;
 
-    // TODO: mit echten ports arbeiten.
-
-    public static void main(String[] args) throws IOException {
-        System.out.println("Started Nameservice.");
-        NameService ns = new NameServiceImpl(Integer.parseInt(args[0]));
-
-        String bla = "my object";
-        ns.rebind(bla, "hallo");
-
-        Object result = ns.resolve("hallo");
-        System.out.println("Result: " +result);
-
-    }
-
-    public NameServiceImpl(int port) throws IOException {
-        this.port = port;
+    public NameServiceImpl() throws IOException {
         register = new HashMap();
     }
 
     @Override
     public void rebind(Object servant, String name) {
+        log(this, "NameService.rebind(" + servant + "," + name + ")");
         register.put(name, servant);
     }
 
     @Override
     public Object resolve(String name) {    // null als R�ckgabewert ist erlaubt
+        log(this, "NameService.resolve("+ name + ")");
         return register.get(name);
     }
 
