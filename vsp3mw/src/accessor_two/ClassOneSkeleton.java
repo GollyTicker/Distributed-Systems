@@ -19,14 +19,14 @@ public class ClassOneSkeleton {
     /*
         double methodOne(String param1, double param2) throws SomeException112
 
-        double methodTwo(String param1, double param2) throws SomeException112, someException304
+        double methodTwo(String param1, double param2) throws SomeException112, SomeException304
     */
 
     private int port;
     private ClassOneImplBase cls;
 
-    public ClassOneSkeleton(ClassOneImplBase cls) throws IOException {
-        this.port = Server.newPort();
+    public ClassOneSkeleton(int port, ClassOneImplBase cls) throws IOException {
+        this.port = port;
         Runnable r = () -> {
             try {
                 Server s = new Server(port);
@@ -71,11 +71,21 @@ public class ClassOneSkeleton {
                     }
                     c.send(response);
                 } else if (method.isMethod(METHODTWO)) {
-                    /*String name = (String) method.params[0];
-                    Object obj = ns.resolve(name);
-                    String response = ReturnMarshaller.marshall(obj);
+                    // double methodTwo(String param1, double param2) throws SomeException112, SomeException304
+                    String param1 = (String) method.params[0];
+                    double param2 = ((Double) method.params[1]).doubleValue();
+                    String response = "";
+                    try {
+                        double res = cls.methodTwo(param1,param2);
+                        response = ReturnMarshaller.marshall(new Double(res));
+                    }
+                    catch (SomeException112 e) {
+                        response = ErrorMarshaller.marshall(e);
+                    }
+                    catch (SomeException304 e) {
+                        response = ErrorMarshaller.marshall(e);
+                    }
                     c.send(response);
-                    */
                 } else {
                     checkPre(false, "Unknown Method: " + method.methodName);
                 }

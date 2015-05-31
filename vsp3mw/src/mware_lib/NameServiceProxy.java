@@ -1,5 +1,7 @@
 package mware_lib;
 
+import accessor_two.ClassOneImplBase;
+import accessor_two.ClassOneSkeleton;
 import mware_lib.marshalling.*;
 import mware_lib.tcp.Client;
 import java.io.IOException;
@@ -29,8 +31,9 @@ public class NameServiceProxy extends NameService {
     public void rebind(Object servant, String name) {
         try {
             log(this,"NameServiceProxy.rebind(" + servant + "," + name + ")");
+            String objectReference = ReferenceService.createSkeleton(servant,name);
             Client client = new Client(this.host, this.port);
-            String rebindMethod = MethodMarshaller.marshall(new Method(REBIND, new Object[]{servant, name}));
+            String rebindMethod = MethodMarshaller.marshall(new Method(REBIND, new Object[]{objectReference, name}));
             client.send(rebindMethod);
             String response = client.receive();
 
@@ -51,23 +54,22 @@ public class NameServiceProxy extends NameService {
         try {
             log(this,"NameServiceProxy.resolve("+ name + ")");
             Client client = new Client(this.host, this.port);
-            String rebindMethod = MethodMarshaller.marshall(new Method(RESOLVE, new Object[]{name}));
-            client.send(rebindMethod);
+            String resolveMethod = MethodMarshaller.marshall(new Method(RESOLVE, new Object[]{name}));
+            client.send(resolveMethod);
             String response = client.receive();
             client.close();
 
             if (ReturnMarshaller.isReturn(response)) {
-                return ReturnMarshaller.demarshall(response);
+                String objectReference = (String) ReturnMarshaller.demarshall(response);
+                Object objProxy = ReferenceService.createProxy(objectReference);
+                return objProxy;
             } else if (ErrorMarshaller.isException(response)) {
                 throw ErrorMarshaller.demarshall(response);
             } else {
                 return null;
             }
-
-
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException(e);
         }
 
     }

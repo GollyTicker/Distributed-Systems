@@ -1,7 +1,5 @@
 package mware_lib;
 
-import nameservice.NameServiceImpl;
-
 import java.io.IOException;
 
 public class ObjectBroker {

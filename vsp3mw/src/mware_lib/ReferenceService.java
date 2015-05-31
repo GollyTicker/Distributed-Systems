@@ -9,23 +9,19 @@ import java.net.Inet4Address;
 import java.util.HashMap;
 import java.util.Map;
 
+import static mware_lib.Logger.log;
+
 /**
  * Created by Swaneet on 31.05.2015.
  */
-public class ReferenceService extends NameService {
-    private NameService ns;
-    private Map<Object,Object> skeletonMapping = new HashMap<>();
-    private Map<Object,Object> proxyMapping = new HashMap<>();
+public class ReferenceService {
+    private static Map<Object,Object> skeletonMapping = new HashMap<>();
+    private static Map<Object,Object> proxyMapping = new HashMap<>();
     private static String SEP = ":";
 
     // ObjectReference: "$host:$port:$class"
 
-    public ReferenceService(NameService ns) {
-        this.ns = ns;
-    }
-
-    @Override
-    public void rebind(Object servant, String name) {
+    public static String createSkeleton(Object servant, String name) {
         try {
             int port = Server.newPort();
             Object skeleton = null;
@@ -36,26 +32,24 @@ public class ReferenceService extends NameService {
             }
             skeletonMapping.put(servant,skeleton);
             String host = Inet4Address.getLocalHost().getCanonicalHostName();
-            String objectReference = host + SEP + port + SEP + servant.getClass();
-            ns.rebind(objectReference,name);
+            String objectReference = host + SEP + port + SEP + servant.getClass().getTypeName();
+            return objectReference;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
     }
 
-    @Override
-    public Object resolve(String name) {
+    public static Object createProxy(String objectReference) {
         try {
-            String objectReference = (String) ns.resolve(name);
             String[] strs = objectReference.split(SEP);
             String host = strs[0];
             int port = Integer.parseInt(strs[1]);
+            log("","Class: " + strs[2]);
             Class<?> cls = Class.forName(strs[2]);
             Object proxy = null;
-            if(TypeMapping.isSubClassOf(cls,ClassOneImplBase.class)) {
+            if(TypeMapping.isSubClassOf(cls, ClassOneImplBase.class)) {
                 proxy = new ClassOneProxy(host,port);
-                proxyMapping.put(name,proxy);
+                proxyMapping.put(objectReference,proxy);
             } else {
                 // andere fälle
             }

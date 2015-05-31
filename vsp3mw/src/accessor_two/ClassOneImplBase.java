@@ -11,6 +11,6 @@ public abstract class ClassOneImplBase {
             throws SomeException112, SomeException304;
 
     public static ClassOneImplBase narrowCast(Object rawObjectRef) {
-        return null;
+        return (ClassOneImplBase)rawObjectRef;
     }
 }

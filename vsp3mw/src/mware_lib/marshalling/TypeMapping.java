@@ -38,7 +38,7 @@ public class TypeMapping {
     }
 
     private static boolean isException(Class<?> cls) {
-        return Exception.class.isAssignableFrom(cls);
+        return isSubClassOf(cls,Exception.class);
     }
 
     public static String getTypeName(Object o) {
@@ -84,4 +84,8 @@ public class TypeMapping {
     }
 
     public static class Null {}
+
+    public static boolean isSubClassOf(Class<?> subclass,Class<?> superclass) {
+        return superclass.isAssignableFrom(subclass);
+    }
 }

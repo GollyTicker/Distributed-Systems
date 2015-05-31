@@ -1,5 +1,7 @@
 package application;
 
+import accessor_two.ClassOneImplBase;
+import accessor_two.SomeException112;
 import mware_lib.NameService;
 import mware_lib.ObjectBroker;
 import nameservice.NameServiceMain;
@@ -19,7 +21,8 @@ public class Main {
 
         NameService ns = objBroker.getNameService();
 
-        ns.rebind(5,"fünf");
-        System.out.println("Received: " + ns.resolve("fünf"));
+        ClassOneImplBase cls = new AccessorTwoClassOne();
+
+        ns.rebind(cls,"mycls");
     }
 }

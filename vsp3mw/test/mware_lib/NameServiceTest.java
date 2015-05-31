@@ -36,35 +36,15 @@ public class NameServiceTest {
 
     @Test
     public void testMethods() throws Exception {
-        nsProxy.rebind(1400,"five");
-        assertEquals(1400,nsReal.resolve("five"));
-        assertEquals(1400,nsProxy.resolve("five"));
-
-        nsProxy.rebind(null,"null");
-        assertEquals(null,nsReal.resolve("null"));
-        assertEquals(null,nsProxy.resolve("null"));
-
-        nsProxy.rebind(new Integer(1401),"six");
-        assertEquals(new Integer(1401),nsReal.resolve("six"));
-        assertEquals(new Integer(1401),nsProxy.resolve("six"));
-
-        nsProxy.rebind(1402,"five");
-        assertEquals(1402,nsReal.resolve("five"));
-        assertEquals(1402,nsProxy.resolve("five"));
-
-        nsProxy.rebind("bla","bla");
+        /*nsProxy.rebind("bla","bla");
         assertEquals("bla",nsReal.resolve("bla"));
         assertEquals("bla",nsProxy.resolve("bla"));
 
-        nsProxy.rebind(4.1,"bla");
-        assertEquals(4.1,nsReal.resolve("bla"));
-        assertEquals(4.1,nsProxy.resolve("bla"));
-
-        nsProxy.rebind(new SomeException110("15"),"ex");
-        assertEquals(new SomeException110("15").getMessage(), ((SomeException110) nsReal.resolve("ex")).getMessage());
-        assertEquals(new SomeException110("15").getMessage(),((SomeException110)nsProxy.resolve("ex")).getMessage());
-
         assertEquals(null,nsReal.resolve("unknown"));
         assertEquals(null,nsProxy.resolve("unknown"));
+
+        nsProxy.rebind("","");
+        assertEquals("",nsReal.resolve(""));
+        assertEquals("",nsProxy.resolve(""));*/
     }
 }

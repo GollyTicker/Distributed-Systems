@@ -31,7 +31,7 @@ public class NameServiceSkeleton {
         Runnable r = () -> {
             try {
                 Server s =new Server(port);
-                log(this,"NameService running at " + port);
+                log(this, "NameService running at " + port);
                 while(true) {
                     Connection c = s.getConnection();
                     new Thread(new Worker(ns,c)).start();
@@ -74,7 +74,7 @@ public class NameServiceSkeleton {
                 }
                 c.close();
             } catch (Exception e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }
     }
