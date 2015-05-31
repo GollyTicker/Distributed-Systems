@@ -6,7 +6,7 @@ import application.AccessorTwoClassOne;
 import mware_lib.NameService;
 import mware_lib.ObjectBroker;
 import nameservice.NameServiceMain;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -16,11 +16,11 @@ import static org.junit.Assert.*;
  */
 public class IntegrationTest {
 
-    ObjectBroker nodeA;
-    ObjectBroker nodeB;
+    static ObjectBroker nodeA;
+    static ObjectBroker nodeB;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void setUp() throws Exception {
         new Thread(new NameServiceMain()).start();
         nodeA = ObjectBroker.init(
                 NameServiceMain.HOST,
@@ -58,6 +58,14 @@ public class IntegrationTest {
         assertTrue(new Double(3).equals(result));
         assertTrue(new Double(3).equals(resultResolved));
         assertTrue(new Double(result).equals(resultResolved));
+    }
+
+    @Test(expected = SomeException112.class)
+    public void testExceptions() throws SomeException112{
+        ClassOneImplBase cls1 = rebindNode(nodeA, "mycls");
+        ClassOneImplBase cls2 = resolveNode(nodeB, "mycls");
+
+        cls2.methodOne("wrong",15);
     }
 
     private ClassOneImplBase rebindNode(ObjectBroker node, String className) {
