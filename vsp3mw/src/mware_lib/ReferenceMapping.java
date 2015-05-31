@@ -38,7 +38,6 @@ public class ReferenceMapping {
 
     public static void addSkeleton(Object servant, int port) throws IOException {
         Object skeleton = null;
-        log("ReferenceMapping", "ADD_SKEL: " + servant.getClass());
         if (TypeMapping.isSubClassOf(servant.getClass(), accessor_one.ClassOneImplBase.class)) {
             skeleton = new accessor_one.ClassOneSkeleton(port, (accessor_one.ClassOneImplBase) servant);
         } else if (TypeMapping.isSubClassOf(servant.getClass(), accessor_one.ClassTwoImplBase.class)) {
