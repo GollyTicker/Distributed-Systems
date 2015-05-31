@@ -9,8 +9,6 @@ import accessor_two.SomeException304;
  */
 public class AccessorTwoClassOne extends ClassOneImplBase {
 
-    // Thread tests?
-
     @Override
     public double methodOne(String param1, double param2) throws SomeException112 {
         System.out.println("method one string: " + param1);
