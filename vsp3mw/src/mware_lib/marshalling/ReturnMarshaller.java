@@ -37,7 +37,4 @@ public class ReturnMarshaller {
         return val.startsWith(RETURN);
     }
 
-    public static void main(String[] args) {
-
-    }
 }

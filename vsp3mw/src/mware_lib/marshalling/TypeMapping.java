@@ -42,7 +42,7 @@ public class TypeMapping {
     }
 
     public static String getTypeName(Object o) {
-        Object type = null;
+        Object type;
         if (o == null) {
             type = Null.class;
         } else if (o instanceof Exception) {
@@ -83,11 +83,5 @@ public class TypeMapping {
         return cls.getConstructor(String.class).newInstance(expMsg);
     }
 
-    public static class Null {
-
-    }
-
-    public static void main(String[] args) {
-    }
-
+    public static class Null {}
 }

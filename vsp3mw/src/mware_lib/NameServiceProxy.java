@@ -35,7 +35,7 @@ public class NameServiceProxy extends NameService {
         try {
             log(this,"NameServiceProxy.rebind(" + servant + "," + name + ")");
             Client client = new Client(this.host, this.port);
-            String rebindMethod = MethodMarshaller.marshall(REBIND, new Object[]{servant, name});
+            String rebindMethod = MethodMarshaller.marshall(new Method(REBIND, new Object[]{servant, name}));
             client.send(rebindMethod);
             String response = client.receive();
 
@@ -56,7 +56,7 @@ public class NameServiceProxy extends NameService {
         try {
             log(this,"NameServiceProxy.resolve("+ name + ")");
             Client client = new Client(this.host, this.port);
-            String rebindMethod = MethodMarshaller.marshall(RESOLVE, new Object[]{name});
+            String rebindMethod = MethodMarshaller.marshall(new Method(RESOLVE, new Object[]{name}));
             client.send(rebindMethod);
             String response = client.receive();
             client.close();

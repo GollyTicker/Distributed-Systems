@@ -20,11 +20,11 @@ public class MethodMarshaller {
 
     // "method;$methodname;$arity;[appobject$type;$objString#..]"
 
-    public static String marshall(String methodName, Object[] params) throws MarshallingException {
+    public static String marshall(Method method) throws MarshallingException {
         try {
-            return METHOD + SEP + methodName + SEP + params.length + SEP + paramsString(params);
+            return METHOD + SEP + method.methodName + SEP + method.params.length + SEP + paramsString(method.params);
         } catch (Exception e) {
-            throw new MarshallingException("Invalid input: " + methodName, e);
+            throw new MarshallingException("Invalid input: " + method.methodName, e);
         }
     }
 
@@ -61,19 +61,5 @@ public class MethodMarshaller {
             accu.add(AppObjectMarshaller.marshall(params[idx]));
         }
         return "[" + String.join(PARAMS_SEP, accu) + "]";
-    }
-
-    public static void main(String[] args) throws Exception {
-        HashMap<String, Object[]> methods = new HashMap<>();
-        methods.put("a", new Object[]{"b", new Double(6.2)});
-        methods.put("add", new Object[]{new Integer(5), new SomeException110("abc")});
-        methods.put("bla", new Object[]{});
-        ArrayList<String> marshalled = new ArrayList<>();
-        for(Map.Entry<String, Object[]> e : methods.entrySet()){
-            String s = marshall(e.getKey(), e.getValue());
-            marshalled.add(s);
-            System.out.println("Marshalled: " + s);
-            System.out.println("Demarshalled: " + demarshall(s));
-        }
     }
 }

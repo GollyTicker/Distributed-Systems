@@ -42,27 +42,4 @@ public class ErrorMarshaller {
     public static boolean isException(String val){
         return val.startsWith(EXCEPTION);
     }
-
-
-    public static void main(String[] args) throws Exception {
-        ArrayList<Object> objs = new ArrayList<>(
-                Arrays.asList(
-                        // expected fail for non-exception types
-                        new SomeException110("bla"),
-                        new ArrayIndexOutOfBoundsException("klösd"),
-                        new IndexOutOfBoundsException(),
-                        new IndexOutOfBoundsException("du")
-                )
-        );
-        ArrayList<String> marshalled = new ArrayList<>();
-        ArrayList<Object> demarshalled = new ArrayList<>();
-        for(Object obj : objs){
-            String s = marshall(obj);
-            Object o = demarshall(s);
-            marshalled.add(s);
-            demarshalled.add(o);
-            System.out.println(o.getClass().equals(obj.getClass()));
-        }
-
-    }
 }
