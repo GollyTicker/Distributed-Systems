@@ -1,10 +1,8 @@
 package accessor_two;
 
 import mware_lib.marshalling.ErrorMarshaller;
-import mware_lib.marshalling.Method;
-import mware_lib.marshalling.MethodMarshaller;
 import mware_lib.marshalling.ReturnMarshaller;
-import mware_lib.tcp.Client;
+import mware_lib.RemoteMethodInvocation;
 
 import java.io.IOException;
 
@@ -37,12 +35,12 @@ public class ClassOneProxy extends ClassOneImplBase {
     public double methodOne(String param1, double param2) throws SomeException112 {
         try {
             log(this,"ClassOneProxy.methodOne(" + param1 + "," + param2 + ")");
-
-            Client client = new Client(this.host, this.port);
-            String method = MethodMarshaller.marshall(new Method(METHODONE, new Object[]{param1,param2}));
-            client.send(method);
-            String response = client.receive();
-            client.close();
+            String response = RemoteMethodInvocation.remoteMethodInvocation(
+                    METHODONE,
+                    new Object[]{param1, param2},
+                    this.host,
+                    this.port
+            );
 
             if (ReturnMarshaller.isReturn(response)) {
                 double res = ((Double)ReturnMarshaller.demarshall(response)).doubleValue();
@@ -51,8 +49,6 @@ public class ClassOneProxy extends ClassOneImplBase {
                 Exception e = ErrorMarshaller.demarshall(response);
                 if (e instanceof SomeException112)
                     throw (SomeException112)e;
-            } else {
-                checkPre(false,"RMI Response was neither Return nor Exception: " + response);
             }
         } catch (SomeException112 e){
             throw e;
@@ -67,11 +63,12 @@ public class ClassOneProxy extends ClassOneImplBase {
         try {
             log(this,"ClassOneProxy.methodTwo(" + param1 + "," + param2 + ")");
 
-            Client client = new Client(this.host, this.port);
-            String method = MethodMarshaller.marshall(new Method(METHODTWO, new Object[]{param1,param2}));
-            client.send(method);
-            String response = client.receive();
-            client.close();
+            String response = RemoteMethodInvocation.remoteMethodInvocation(
+                    METHODTWO,
+                    new Object[]{param1, param2},
+                    this.host,
+                    this.port
+            );
 
             if (ReturnMarshaller.isReturn(response)) {
                 double res = ((Double)ReturnMarshaller.demarshall(response)).doubleValue();
@@ -82,8 +79,6 @@ public class ClassOneProxy extends ClassOneImplBase {
                     throw (SomeException112)e;
                 if (e instanceof SomeException304)
                     throw (SomeException304)e;
-            } else {
-                checkPre(false,"RMI Response was neither Return nor Exception: " + response);
             }
         } catch (SomeException112 e){
             throw e;

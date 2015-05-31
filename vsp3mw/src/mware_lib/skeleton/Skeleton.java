@@ -1,8 +1,5 @@
 package mware_lib.skeleton;
 
-import mware_lib.skeleton.MethodsHandler;
-import mware_lib.skeleton.MethodsHandlerFactory;
-import mware_lib.skeleton.SingleMethod;
 import mware_lib.tcp.Connection;
 import mware_lib.tcp.Server;
 
