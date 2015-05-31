@@ -52,8 +52,8 @@ public class ThreadedIntegrationTest {
 
 
         Thread t = new Thread(r1);
-
         t.start();
+        Thread.sleep(300L);
         double ret2 = cls2.methodTwo("", 3);
 
         assertTrue(ret2 == 3);
