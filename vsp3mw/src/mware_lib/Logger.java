@@ -6,7 +6,7 @@ import java.util.Date;
 
 public class Logger {
 
-    public static boolean debug = false;
+    public static boolean debug = true;
 
     public static void log(Object source, Object message) {
         if (debug) {

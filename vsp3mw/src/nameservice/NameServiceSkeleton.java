@@ -19,7 +19,7 @@ public class NameServiceSkeleton {
     void rebind(Object servant, String name) -> "rebind"
 
     Object resolve(String name) -> "resolve"
-    * */
+    */
 
     private int port;
     private NameService ns;
@@ -31,6 +31,7 @@ public class NameServiceSkeleton {
         Runnable r = () -> {
             try {
                 Server s =new Server(port);
+                log(this,"NameService running at " + port);
                 while(true) {
                     Connection c = s.getConnection();
                     new Thread(new Worker(ns,c)).start();
