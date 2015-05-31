@@ -1,6 +1,7 @@
 package accessor_two;
 
 import mware_lib.marshalling.ErrorMarshaller;
+import mware_lib.marshalling.Method;
 import mware_lib.marshalling.ReturnMarshaller;
 import mware_lib.RemoteMethodInvocation;
 
@@ -35,12 +36,8 @@ public class ClassOneProxy extends ClassOneImplBase {
     public double methodOne(String param1, double param2) throws SomeException112 {
         try {
             log(this,"ClassOneProxy.methodOne(" + param1 + "," + param2 + ")");
-            String response = RemoteMethodInvocation.remoteMethodInvocation(
-                    METHODONE,
-                    new Object[]{param1, param2},
-                    this.host,
-                    this.port
-            );
+            Method method = new Method(METHODONE, new Object[]{param1, param2});
+            String response = RemoteMethodInvocation.remoteMethodInvocation(method, this.host, this.port);
 
             if (ReturnMarshaller.isReturn(response)) {
                 double res = ((Double)ReturnMarshaller.demarshall(response)).doubleValue();
@@ -62,13 +59,8 @@ public class ClassOneProxy extends ClassOneImplBase {
     public double methodTwo(String param1, double param2) throws SomeException112, SomeException304 {
         try {
             log(this,"ClassOneProxy.methodTwo(" + param1 + "," + param2 + ")");
-
-            String response = RemoteMethodInvocation.remoteMethodInvocation(
-                    METHODTWO,
-                    new Object[]{param1, param2},
-                    this.host,
-                    this.port
-            );
+            Method method = new Method(METHODTWO, new Object[]{param1, param2});
+            String response = RemoteMethodInvocation.remoteMethodInvocation(method, this.host, this.port);
 
             if (ReturnMarshaller.isReturn(response)) {
                 double res = ((Double)ReturnMarshaller.demarshall(response)).doubleValue();
