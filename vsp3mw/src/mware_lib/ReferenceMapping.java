@@ -4,6 +4,7 @@ import accessor_two.ClassOneImplBase;
 import accessor_two.ClassOneProxy;
 import accessor_two.ClassOneSkeleton;
 import mware_lib.marshalling.TypeMapping;
+import mware_lib.skeleton.Skeleton;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,8 +18,14 @@ import static mware_lib.Utils.checkPre;
  */
 public class ReferenceMapping {
 
-    private static Map<Object, Object> skeletonMapping = new HashMap<>();
+    private static Map<Object, Skeleton<?>> skeletonMapping = new HashMap<>();
     private static Map<Object, Object> proxyMapping = new HashMap<>();
+
+    public static void shutDown(){
+        for(Map.Entry<Object, Skeleton<?>> e : skeletonMapping.entrySet()){
+            e.getValue().shutDown();
+        }
+    }
 
     public static Object getProxy(String objectReference, Class<?> cls, String host, int port) throws IOException {
         Object proxy = null;
@@ -37,7 +44,7 @@ public class ReferenceMapping {
     }
 
     public static void addSkeleton(Object servant, int port) throws IOException {
-        Object skeleton = null;
+        Skeleton<?> skeleton = null;
         if (TypeMapping.isSubClassOf(servant.getClass(), accessor_one.ClassOneImplBase.class)) {
             skeleton = new accessor_one.ClassOneSkeleton(port, (accessor_one.ClassOneImplBase) servant);
         } else if (TypeMapping.isSubClassOf(servant.getClass(), accessor_one.ClassTwoImplBase.class)) {

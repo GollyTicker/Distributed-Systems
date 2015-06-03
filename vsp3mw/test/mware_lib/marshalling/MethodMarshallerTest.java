@@ -4,11 +4,8 @@ import accessor_one.SomeException110;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -26,14 +23,14 @@ public class MethodMarshallerTest {
     Method methodWithoutParams;
     String methodWithoutParamsMarshalled = "method;methodWithoutParams;0;[]";
 
-    ArrayList<Method> methods;
+    ArrayList<Method> mymethods;
 
     @Before
     public void setUp() throws Exception {
         methodWithParams = new Method("methodWithParams", new Object[]{"b", new Double(6.2)});
         methodWithException = new Method("methodWithException", new Object[]{new Integer(1), new SomeException110("abc")});
         methodWithoutParams = new Method("methodWithoutParams", new Object[]{});
-        methods = new ArrayList<>(
+        mymethods = new ArrayList<>(
                 Arrays.asList(
                         methodWithParams,
                         methodWithoutParams,
@@ -64,7 +61,7 @@ public class MethodMarshallerTest {
 
     @Test
     public void testMain() throws Exception {
-        for (Method method : methods) {
+        for (Method method : mymethods) {
             String s = MethodMarshaller.marshall(method);
             Method m = MethodMarshaller.demarshall(s);
             assertEquals(method, m);

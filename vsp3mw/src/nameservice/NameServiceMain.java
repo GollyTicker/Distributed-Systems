@@ -24,11 +24,10 @@ public class NameServiceMain extends Thread {
     }
 
     private NameService ns;
-    private NameServiceSkeleton nsSkeleton;
 
     public NameServiceMain() throws IOException {
         ns = new NameServiceImpl();
-        nsSkeleton = new NameServiceSkeleton(PORT, ns);
+        new NameServiceSkeleton(PORT, ns);
     }
 
     @Override

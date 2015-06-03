@@ -18,6 +18,7 @@ public class RemoteMethodInvocation {
         client.send(methodStr);
         String response = client.receive();
         client.close();
+        log("RMI","RMI Response from " + host + ":" + port + ": " + response);
         return response;
     }
 }

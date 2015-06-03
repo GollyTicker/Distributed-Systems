@@ -15,23 +15,35 @@ public abstract class Skeleton<A> {
     private int port;
     public abstract String[] methodsNames();
     public abstract List<SingleMethod<A>> methods();
+    private Thread serverThread;
 
     public Skeleton(int port, A obj) throws IOException {
         this.port = port;
         MethodsHandler<A> methodsHandler = MethodsHandlerFactory.fromMethod(methodsNames(), methods());
         Runnable r = () -> {
+            Server s = null;
             try {
-                Server s = new Server(port);
+                s = new Server(port);
                 log(this,"Skeleton<"+obj.getClass().getSimpleName()+"> running at " + port);
                 while(true) {
                     Connection c = s.getConnection();
                     new Thread(new Worker(obj,c, methodsHandler)).start();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception e1) {
+                e1.printStackTrace();
+                try{
+                    s.shutdown();
+                } catch (Exception e2) {
+                    e2.printStackTrace();
+                }
             }
         };
-        new Thread(r).start();
+        this.serverThread = new Thread(r);
+        this.serverThread.start();
+    }
+
+    public void shutDown(){
+        this.serverThread.interrupt();
     }
 
     public class Worker<A> implements Runnable {

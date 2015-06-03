@@ -33,7 +33,7 @@ public class ClassOneSkeleton extends Skeleton<ClassOneImplBase> {
                 String response = "";
                 try {
                     String res = obj.methodOne(param1, param2);
-                    response = ReturnMarshaller.marshall(new Double(res));
+                    response = ReturnMarshaller.marshall(res);
                 } catch (SomeException112 e) {
                     response = ErrorMarshaller.marshall(e);
                 }

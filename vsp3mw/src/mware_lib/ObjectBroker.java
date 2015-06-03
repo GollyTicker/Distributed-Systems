@@ -26,5 +26,6 @@ public class ObjectBroker {
     }
 
     public void shutDown() {
+        ReferenceMapping.shutDown();
     }
 }
