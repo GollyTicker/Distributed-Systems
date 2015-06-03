@@ -1,14 +1,7 @@
 package mware_lib;
 
-import accessor_two.ClassOneImplBase;
-import accessor_two.ClassOneProxy;
-import accessor_two.ClassOneSkeleton;
-import mware_lib.marshalling.TypeMapping;
 import mware_lib.tcp.Server;
-
 import java.net.Inet4Address;
-import java.util.HashMap;
-import java.util.Map;
 
 import static mware_lib.Logger.log;
 
@@ -26,7 +19,9 @@ public class ReferenceService {
             int port = Server.newPort();
             ReferenceMapping.addSkeleton(servant, port);
             String host = Inet4Address.getLocalHost().getHostAddress();
-            String objectReference = host + SEP + port + SEP + servant.getClass().getTypeName();
+            // geht cast immer? TODO:
+            String proxyName = ((HasProxy)servant).getProxyClass().getTypeName();
+            String objectReference = host + SEP + port + SEP + proxyName;
             return objectReference;
         } catch (Exception e) {
             throw new RuntimeException(e);

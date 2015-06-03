@@ -26,9 +26,9 @@ public class ClassTwoProxy extends ClassTwoImplBase {
     private int port;
     private String host;
 
-    public ClassTwoProxy(String host, int port) throws IOException {
+    public ClassTwoProxy(String host, Integer port) throws IOException {
         this.host = host;
-        this.port = port;
+        this.port = port.intValue();
     }
 
     @Override

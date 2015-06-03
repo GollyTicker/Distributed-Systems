@@ -1,12 +1,11 @@
 package mware_lib;
 
-import accessor_two.ClassOneImplBase;
-import accessor_two.ClassOneProxy;
-import accessor_two.ClassOneSkeleton;
 import mware_lib.marshalling.TypeMapping;
+import mware_lib.skeleton.HasSkeleton;
 import mware_lib.skeleton.Skeleton;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,14 +26,11 @@ public class ReferenceMapping {
         }
     }
 
-    public static Object getProxy(String objectReference, Class<?> cls, String host, int port) throws IOException {
+    public static Object getProxy(String objectReference, Class<?> cls, String host, int port) throws Exception {
         Object proxy = null;
-        if (TypeMapping.isSubClassOf(cls, accessor_one.ClassOneImplBase.class)) {
-            proxy = new accessor_one.ClassOneProxy(host, port);
-        } else if (TypeMapping.isSubClassOf(cls, accessor_one.ClassTwoImplBase.class)) {
-            proxy = new accessor_one.ClassTwoProxy(host, port);
-        } else if (TypeMapping.isSubClassOf(cls, accessor_two.ClassOneImplBase.class)) {
-            proxy = new accessor_two.ClassOneProxy(host, port);
+        if (TypeMapping.isSubClassOf(cls, HasProxy.class)) {
+            Class<? extends HasProxy> hpclass = cls.asSubclass(HasProxy.class);
+            proxy = hpclass.getDeclaredConstructor(String.class,Integer.class).newInstance(host,new Integer(port));
         }
         if (proxy != null)
             proxyMapping.put(objectReference, proxy);
@@ -45,12 +41,8 @@ public class ReferenceMapping {
 
     public static void addSkeleton(Object servant, int port) throws IOException {
         Skeleton<?> skeleton = null;
-        if (TypeMapping.isSubClassOf(servant.getClass(), accessor_one.ClassOneImplBase.class)) {
-            skeleton = new accessor_one.ClassOneSkeleton(port, (accessor_one.ClassOneImplBase) servant);
-        } else if (TypeMapping.isSubClassOf(servant.getClass(), accessor_one.ClassTwoImplBase.class)) {
-            skeleton = new accessor_one.ClassTwoSkeleton(port, (accessor_one.ClassTwoImplBase) servant);
-        } else if (TypeMapping.isSubClassOf(servant.getClass(), accessor_two.ClassOneImplBase.class)) {
-            skeleton = new accessor_two.ClassOneSkeleton(port, (accessor_two.ClassOneImplBase) servant);
+        if (TypeMapping.isSubClassOf(servant.getClass(), HasSkeleton.class)) {
+            skeleton = ((HasSkeleton)servant).startSkeleton(port,servant);
         }
         if (skeleton != null)
             skeletonMapping.put(servant, skeleton);

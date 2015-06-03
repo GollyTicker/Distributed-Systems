@@ -27,9 +27,9 @@ public class ClassOneProxy extends ClassOneImplBase {
     private int port;
     private String host;
 
-    public ClassOneProxy(String host, int port) throws IOException {
+    public ClassOneProxy(String host, Integer port) throws IOException {
         this.host = host;
-        this.port = port;
+        this.port = port.intValue();
     }
 
     @Override
