@@ -40,7 +40,7 @@ public class ClassOneProxy extends ClassOneImplBase {
                 return res;
             } else if (ErrorMarshaller.isException(response)) {
                 Exception e = ErrorMarshaller.demarshall(response);
-                if (e instanceof accessor_two.SomeException112)
+                if (e instanceof SomeException112)
                     throw (SomeException112) e;
             }
         } catch (SomeException112 e) {

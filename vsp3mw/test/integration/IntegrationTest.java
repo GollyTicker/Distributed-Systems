@@ -77,7 +77,6 @@ public class IntegrationTest {
         // Accessor One Class One
         String strReal = a1c1Real.methodOne("15",12);
         String strProxy = a1c1Proxy.methodOne("15",12);
-        System.out.println("Real vs. proxy: " + strReal + "; " + strProxy);
         assertTrue(strReal.equals(strProxy));
         assertTrue(strProxy.equals("3"));
 
@@ -94,11 +93,12 @@ public class IntegrationTest {
 
     }
 
-    /*@Test(expected = accessor_one.SomeException112.class)
+    @Test(expected = accessor_one.SomeException112.class)
     public void testExceptionA1C1() throws accessor_one.SomeException112 {
         rebindNode(nodeA);
         resolveNode(nodeB);
         a1c1Proxy.methodOne("invalid integer", 15);
+        System.out.println("HALLLLLLLO");
     }
 
     @Test(expected = accessor_two.SomeException112.class)
@@ -106,7 +106,7 @@ public class IntegrationTest {
         rebindNode(nodeA);
         resolveNode(nodeB);
         a2c1Proxy.methodOne("invalid double", 15);
-    }*/
+    }
 
     private void rebindNode(ObjectBroker node) {
         NameService ns = node.getNameService();
