@@ -24,11 +24,13 @@ public class ThreadedIntegrationTest {
     @BeforeClass
     public static void setUp() throws Exception {
         new Thread(new NameServiceMain()).start();
+        Thread.sleep(200L);
         nodeA = ObjectBroker.init(
                 NameServiceMain.HOST,
                 NameServiceMain.PORT,
                 true
         );
+        Thread.sleep(200L);
         nodeB = ObjectBroker.init(
                 NameServiceMain.HOST,
                 NameServiceMain.PORT,

@@ -30,7 +30,7 @@ public class NameServiceSkeleton {
 
         Runnable r = () -> {
             try {
-                Server s =new Server(port);
+                Server s = new Server(port);
                 log(this, "NameService running at " + port);
                 while(true) {
                     Connection c = s.getConnection();

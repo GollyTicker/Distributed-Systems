@@ -3,13 +3,25 @@ package nameservice;
 import mware_lib.NameService;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
 
 /**
  * Created by Swaneet on 31.05.2015.
  */
 public class NameServiceMain extends Thread {
     public static final int PORT = 54321;
-    public static final String HOST = "localhost";
+    public static String HOST;
+
+    static {
+        try {
+            HOST = Inet4Address.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            HOST = "";
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
 
     private NameService ns;
     private NameServiceSkeleton nsSkeleton;
