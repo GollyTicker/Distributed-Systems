@@ -28,8 +28,6 @@ rel/example_project
 
 # Java
 
-*.class
-
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
