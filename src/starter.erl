@@ -19,11 +19,13 @@ start(CmdArgs) ->
   spawn(fun() -> sender:init(DataSource,Broker,Clock) end).
 
 
-parseConfig([InterfaceName, McastAddress, ReceivePort, Station]) ->
+parseConfig([InterfaceName, McastAddress, ReceivePort, Station, UTCoffsetMs]) ->
   IFName = atom_to_list(InterfaceName),
   MCA = atom_to_list(McastAddress),
   Port = atom_to_integer(ReceivePort),
+  Offset = atom_to_integer(UTCoffsetMs),
   log(?LOG, starter, ["IFName: ", IFName, " MCA: ", MCA, 
-                      " Port: ", Port, " Station: ", Station]),
-  {IFName, MCA, Port, Station}.
+                      " Port: ", Port, " Station: ", Station,
+                      " Offset: ", Offset]),
+  {IFName, MCA, Port, Station, Offset}.
 

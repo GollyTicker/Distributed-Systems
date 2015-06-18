@@ -53,7 +53,7 @@ dataSource="java -cp . datasource.DataSource"
 #
 # Example: stationCmd="java aufgabe4.MyStation $interfaceName $mcastAddress $receivePort $stationClass"
 ########################################################################################################
-stationCmd="erl -noshell -s starter start $interfaceName $mcastAddress $receivePort $stationClass"
+stationCmd="erl -noshell -s starter start $interfaceName $mcastAddress $receivePort $stationClass $UTCoffsetMs"
 
 
 printUsage() {
