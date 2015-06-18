@@ -9,8 +9,11 @@ init(Source,Broker,Clock) ->
   %receive {chars, Chars} -> utils:log(?LOG, sender,["Source Sender: ",Chars]) end,
   
   
-  Clock ! {self(),getCurrentTimeMillis},
-  receive {timeMillis, Millis} -> utils:log(?LOG, sender,["Millis: ",Millis]) end,
+  %Clock ! {self(),getCurrentTimeMillis},
+  %receive {timeMillis, Millis} -> utils:log(?LOG, sender,["Millis: ",Millis]) end,
+  
+  % Clock ! {self(),getCurrentTimeMillis},
+  % receive {timeMillis, Millis} -> utils:log(?LOG, sender,["FST: ",sync:fstByMillis(Millis)]) end,
   
   
   loop(Source,Broker,Clock,0).
