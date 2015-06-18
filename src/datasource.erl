@@ -1,5 +1,9 @@
 -module(datasource).
--export([loop/0]).
+-export([init/0]).
 
-loop() -> 
-  io:format("Looping clock").
+init() -> loop(5).
+
+loop(0) -> io:format("Fin");
+loop(N) -> 
+  io:format("Looping datasource"),
+  loop(N - 1).

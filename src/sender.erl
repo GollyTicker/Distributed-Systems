@@ -1,5 +1,9 @@
 -module(sender).
--export([loop/0]).
+-export([init/0]).
 
-loop() -> 
-  io:format("Looping sender").
+init() -> loop(5).
+
+loop(0) -> io:format("Fin");
+loop(N) -> 
+  io:format("Looping sender"),
+  loop(N - 1).

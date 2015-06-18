@@ -1,5 +1,9 @@
 -module(slot_broker).
--export([loop/0]).
+-export([init/0]).
 
-loop() -> 
-  io:format("Looping slot broker").
+init() -> loop(5).
+
+loop(0) -> io:format("Fin");
+loop(N) -> 
+  io:format("Looping slot broker"),
+  loop(N - 1).

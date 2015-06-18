@@ -1,5 +1,9 @@
 -module(datasink).
--export([loop/0]).
+-export([init/0]).
 
-loop() -> 
-  io:format("Looping datasink").
+init() -> loop(5).
+
+loop(0) -> io:format("Fin");
+loop(N) -> 
+  io:format("Looping datasink"),
+  loop(N - 1).
