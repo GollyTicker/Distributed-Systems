@@ -26,4 +26,3 @@ log(Datei,Module,List) ->
 randomInt(Num) ->
   random:seed(erlang:now()),
   random:uniform(Num).
-
