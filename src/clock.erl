@@ -1,5 +1,6 @@
 -module(clock).
--export([init/0]).
+-export([init/1]).
+-import(utils,[log/3]).
 
 init(Offset) -> loop(Offset).
 
@@ -16,14 +17,14 @@ loop(Offset) ->
   
     {Sender, getCurrentTimeMillis} ->
       {MegaSecs, Secs, MicroSecs} = now(),
-    	Millis = ((MegaSecs*1000000 + Secs)*1000000 + 1000*Offset + MicroSecs) div 1000.
+    	Millis = ((MegaSecs*1000000 + Secs)*1000000 + 1000*Offset + MicroSecs) div 1000,
     	Sender ! {timeMillis, Millis},
     	loop(Offset);
     	
   	{updateOffset, Delta} ->
   	  NewOffset = Offset + Delta,
   	  log(?LOG,clock,["Update offset (",Delta,"): ", NewOffset]),
-  	  loop(NewOffset)
+  	  loop(NewOffset);
   
   	Any -> 
       log(?LOG, clock, ["Received unknown message: ", Any])

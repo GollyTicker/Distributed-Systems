@@ -5,14 +5,14 @@
 -define(LOG, "log/starter.log").
 
 start(CmdArgs) ->
-  Config = parseConfig(CmdArgs),
+  {_IFName, _MCA, _Port, _Station, Offset} = parseConfig(CmdArgs),
 
   DataSource = spawn(fun() -> datasource:init() end),
   DataSink = spawn(fun() -> datasink:init() end),
   
   timer:sleep(300),
   
-  Clock = spawn(fun() -> clock:init() end),
+  Clock = spawn(fun() -> clock:init(Offset) end),
   Broker = spawn(fun() -> slot_broker:init(Clock) end),
 
   spawn(fun() -> receiver:init(DataSink,Broker,Clock) end),

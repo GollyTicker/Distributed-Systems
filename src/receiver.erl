@@ -1,7 +1,7 @@
 -module(receiver).
 -export([init/3]).
 
-init(Sink,Broker,Clock) -> loop(0).
+init(_Sink,_Broker,_Clock) -> loop(0).
 
 loop(0) -> io:format("Fin");
 loop(N) -> 
