@@ -1,14 +1,10 @@
 #!/bin/bash
 
 rm -rf log/*
-rm -r out/*.beam
+rm -rf out/*.beam
 
 cd src
 
-erl -v -make
-
-rm -r ../out 
-mkdir ../out
-mv *.beam ../out
+erl -v -make && mv *.beam ../out
 
 cd ..
