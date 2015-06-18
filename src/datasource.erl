@@ -6,22 +6,15 @@
 
 % Abfrage der aktuellen 24 Bytes: 
 % PID ! {self(),currentData}
-% receive {bytes, Bytes} -> ... end
+% receive {chars, Chars} -> ... end
 
-init() ->
-  spawn( fun() -> reader(self()) end ),
-  loop(eof).
+init() -> loop().
 
-loop(Chars) ->
+loop() ->
   receive
-    {Sender,currentData} -> Sender ! {bytes,Chars}, loop(Chars);
-    {newdata,NewChars}   -> loop(NewChars)
-  end
-
-reader(Loop) ->
-  log(bla,datasource,["Waiting to read."]),
-  Chars = get_chars('',24),
-  Loop ! {newdata,Chars},
-  timer:sleep(1000),
-  log(bla,datasource,["Read: ", Resp]),
-  reader(Loop).
+    {Sender,currentData} ->
+      Chars = get_chars('',24),
+      log(bla,datasource,["Read: ", lists:sublist(Chars,10), " ..."]),
+      Sender ! {chars,Chars},
+      loop()
+  end.

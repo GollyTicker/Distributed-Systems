@@ -1,7 +1,7 @@
 -module(slot_broker).
--export([init/0]).
+-export([init/1]).
 
-init() -> loop(5).
+init(Clock) -> loop(0).
 
 loop(0) -> io:format("Fin");
 loop(N) -> 
