@@ -1,9 +1,11 @@
 -module(sender).
 -export([init/3]).
 
+-define(LOG, "log/sender.log").
+
 init(Source,Broker,Clock) ->
   Source ! {self(),currentData},
-  receive {chars, Chars} -> utils:log(sender,sender,["Source Sender :",Chars]) end,
+  receive {chars, Chars} -> utils:log(?LOG, sender,["Source Sender :",Chars]) end,
   loop(Source,Broker,Clock,0).
 
 loop(Source,Broker,Clock,0) -> io:format("Fin");

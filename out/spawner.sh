@@ -1,6 +1,7 @@
 
-ls
+./terminate.sh
 
+# > ls
 # out/
 # ├── datasource/
 # ├── spawner.sh

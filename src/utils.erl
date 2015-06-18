@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1]).
+-export([log/3,randomInt/1, atom_to_integer/1]).
 
 % Eine Datei mit den Utilities
 
@@ -26,3 +26,5 @@ log(Datei,Module,List) ->
 randomInt(Num) ->
   random:seed(erlang:now()),
   random:uniform(Num).
+
+atom_to_integer(X) -> list_to_integer(atom_to_list(X)).
