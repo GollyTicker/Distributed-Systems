@@ -8,15 +8,17 @@
 
 % Abfrage der aktuellen 24 Bytes: 
 % PID ! {self(),currentData}
-% receive {chars, Chars} -> ... end
+% receive {payload, Chars} -> ... end
 
 init() -> loop().
 
 loop() ->
   receive
+    
     {Sender,currentData} ->
       Chars = get_chars('',24),
       log(?LOG, datasource,["Read: ", lists:sublist(Chars,10), " ..."]),
-      Sender ! {chars,Chars},
+      Sender ! {payload,Chars},
       loop()
+
   end.

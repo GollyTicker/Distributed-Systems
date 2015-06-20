@@ -1,13 +1,14 @@
 -module(receiver).
--export([init/3]).
+-export([init/4]).
 
 -import(utils,[log/3]).
 
 -define(LOG, "log/receiver.log").
 
-init(Sink,Broker,Clock) -> 
+init(Con,Sink,Broker,Clock) -> 
   {Frame, _, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
   Diffs = [],
+  %werkzeug:openRecA(MultiCast, Addr, Port)
   loop(Diffs, Frame, Sink, Broker, Clock).
 
 % millisToNextFrame(M)
