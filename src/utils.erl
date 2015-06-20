@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1, atom_to_integer/1]).
+-export([log/3,randomInt/1, atom_to_integer/1, createPacket/4, parsePacket/1]).
 
 % Eine Datei mit den Utilities
 
@@ -28,3 +28,20 @@ randomInt(Num) ->
   random:uniform(Num).
 
 atom_to_integer(X) -> list_to_integer(atom_to_list(X)).
+
+createPacket(Station,Data,Slot,TS) ->
+  <<(list_to_binary(Station)):1/binary,
+    (list_to_binary(Data)):24/binary,
+    Slot:8/integer,
+    TS:64/integer-big>>. 
+
+parsePacket(<<Station:1/binary, 
+              Data:24/binary, 
+              Slot:8/integer, 
+              TS:64/integer-big>>) -> 
+  { binary_to_list(Station), 
+    binary_to_list(Data), 
+    Slot, 
+    TS }.
+
+

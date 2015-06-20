@@ -1,5 +1,5 @@
 -module(clock).
--export([init/1]).
+-export([init/1,getMillisByFunc/2]).
 -import(utils,[log/3]).
 
 init(Offset) -> loop(Offset).
@@ -30,3 +30,14 @@ loop(Offset) ->
       log(?LOG, clock, ["Received unknown message: ", Any])
     	
   end.
+
+
+getMillisByFunc(Clock, Func) ->
+  Clock ! {self(), getCurrentTimeMillis},
+  receive 
+    {timeMillis, Millis} -> 
+      Func(Millis)
+  end.
+
+
+

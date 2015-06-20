@@ -5,7 +5,7 @@
 -define(LOG, "log/starter.log").
 
 start(CmdArgs) ->
-  {_IFName, _MCA, _Port, _Station, Offset} = parseConfig(CmdArgs),
+  {_IFName, _MCA, _Port, Station, Offset} = parseConfig(CmdArgs),
 
   DataSource = spawn(fun() -> datasource:init() end),
   DataSink = spawn(fun() -> datasink:init() end),
@@ -16,14 +16,15 @@ start(CmdArgs) ->
   Broker = spawn(fun() -> slot_broker:init(Clock) end),
 
   spawn(fun() -> receiver:init(DataSink,Broker,Clock) end),
-  spawn(fun() -> sender:init(DataSource,Broker,Clock) end).
+  spawn(fun() -> sender:init(Station, DataSource,Broker,Clock) end).
 
 
-parseConfig([InterfaceName, McastAddress, ReceivePort, Station, UTCoffsetMs]) ->
+parseConfig([InterfaceName, McastAddress, ReceivePort, StationType, UTCoffsetMs]) ->
   IFName = atom_to_list(InterfaceName),
   MCA = atom_to_list(McastAddress),
   Port = atom_to_integer(ReceivePort),
   Offset = atom_to_integer(UTCoffsetMs),
+  Station = atom_to_list(StationType),
   log(?LOG, starter, ["IFName: ", IFName, " MCA: ", MCA, 
                       " Port: ", Port, " Station: ", Station,
                       " Offset: ", Offset]),

@@ -1,9 +1,12 @@
 -module(slot_broker).
 -export([init/1]).
 
-init(_Clock) -> loop(0).
+init(Clock) -> loop(Clock).
+loop(Clock) -> 
+  receive
+    {PID, doesPacketCollide, Packet, TS} ->
+      PID ! {notCollides, Packet, TS}
+  end,
+  loop(Clock).
 
-loop(0) -> io:format("Fin");
-loop(N) -> 
-  io:format("Looping slot broker"),
-  loop(N - 1).
+
