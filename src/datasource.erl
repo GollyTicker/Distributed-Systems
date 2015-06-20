@@ -1,5 +1,5 @@
 -module(datasource).
--export([init/0]).
+-export([init/0,getNewSource/1]).
 
 -import(io,[get_chars/2]).
 -import(utils,[log/3]).
@@ -17,8 +17,16 @@ loop() ->
     
     {Sender,currentData} ->
       Chars = get_chars('',24),
-      log(?LOG, datasource,["Read: ", lists:sublist(Chars,10), " ..."]),
+      log(?LOG, datasource,["Read: ", utils:getTeam(Chars), " ..."]),
       Sender ! {payload,Chars},
       loop()
 
+  end.
+
+
+getNewSource(Source) ->
+  Source ! {self(),currentData},
+  receive 
+    {payload, Data} -> 
+      Data
   end.

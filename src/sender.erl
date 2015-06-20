@@ -2,27 +2,29 @@
 -export([init/5]).
 
 -import(utils,[log/3]).
+-import(datasource,[getNewSource/1]).
 
 -define(LOG, "log/sender.log").
 
-init(Con,Station,Source,Broker,Clock) ->
-  %Socket = werkzeug:openSe(Addr, Port),
-  %gen_udp:controlling_process(Socket, self()),
+init(InitalCon,Station,Source,Broker,Clock) ->
+  log(?LOG,sender,["Sender start"]),
+
+  {IFAddr, Port, MCA} = InitalCon,
+  Socket = werkzeug:openSe(IFAddr, Port),
+  Con = {Socket, IFAddr, Port, MCA},
 
   CNr = undefined,
 
-  waitToNextFrame(Clock),
+  sync:waitToNextFrame(Clock),
 
   loop(Con, CNr, Station, Source, Broker, Clock).
 
 loop(Con, CNr, Station, Source, Broker, Clock) -> 
-  log(?LOG,sender,["Next Frame!"]),
   Data = getNewSource(Source),
 
   Broker ! {self(), getNextFrameSlotNr},
   receive
     {nextFrameSlotNr, NewNummer} -> 
-      log(?LOG,sender,["NewNummer ",NewNummer]),
       NewNummer
   end,
 
@@ -31,25 +33,28 @@ loop(Con, CNr, Station, Source, Broker, Clock) ->
       NewNummer;
     _ ->
       TimeToWait = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToSlot(CNr, X) end),
-      timer:sleep(TimeToWait),
-      sendMessage(Con, Clock, Broker, CNr, Station, Data)
+      case TimeToWait >= 0 of
+        true -> 
+          sync:safeSleep(TimeToWait),
+          sendMessage(Con, Clock, Broker, CNr, Station, Data);
+        false -> NewNummer
+      end
   end, 
-  waitToNextFrame(Clock),
-  log(?LOG,sender,["Finished  Waiting"]),
+
+  sync:waitToNextFrame(Clock),
+  
   loop(Con, NewNummer2, Station, Source, Broker, Clock).
-
-
 
 sendMessage(Con, Clock, Broker, CNr, Station, Data) ->
   {_, SlotNr, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
   CanSendMessage = (CNr == SlotNr) and isFree(Broker, CNr),
-  log(?LOG,sender,["Can I send a message?", CanSendMessage]),
+  log(?LOG,sender,["Send Message? ", CanSendMessage]),
   NewNr = case CanSendMessage of
     true -> 
-      {Socket, Addr, Port} = Con,
+      {Socket, _, Port, MCA} = Con,
       Packet = createPacket(Clock,Station,Data,CNr),
-      gen_udp:send(Socket, Addr, Port, Packet),
-      log(?LOG,sender,["Sent packet: ", Packet, " Con: ", Con, " CNr: " , CNr]),
+      gen_udp:send(Socket, MCA, Port, Packet),
+      log(?LOG,sender,["Sent packet: ", CNr]),
       CNr;
     false -> 
       % Zeit verpasst oder occupied
@@ -64,22 +69,8 @@ isFree(Broker, CNr) ->
     occupied -> false     
   end.
 
-waitToNextFrame(Clock) ->
-  MillisToNextFrame = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToNextFrame(X) end),
-  log(?LOG,sender,["Waiting for next Frame..", MillisToNextFrame]),
-  timer:sleep(MillisToNextFrame).
-
-getNewSource(Source) ->
-  Source ! {self(),currentData},
-  receive 
-    {payload, Data} -> 
-      utils:log(?LOG, sender,["Source Sender: ",Data]),
-      Data
-  end.
-
 createPacket(Clock,Station,Data,Slot) ->
   TS = clock:getMillisByFunc(Clock, fun(X) -> X end),
   utils:createPacket(Station,Data,Slot,TS).
-
 
 

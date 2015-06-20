@@ -1,49 +1,53 @@
 -module(receiver).
--export([init/4]).
+-export([init/5]).
 
 -import(utils,[log/3]).
 
 -define(LOG, "log/receiver.log").
 
-init(Con,Sink,Broker,Clock) -> 
+init(Con,Team,Sink,Broker,Clock) -> 
+  log(?LOG,receiver,["Receiver start"]),
+
   {Frame, _, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
   Diffs = [],
-  %werkzeug:openRecA(MultiCast, Addr, Port)
-  loop(Diffs, Frame, Sink, Broker, Clock).
+  Self = self(),
+  spawn(fun() -> udp_receiver:init(Self, Con) end),
 
-% millisToNextFrame(M)
-% fstByMillis(M)
-loop(Diffs, Frame, Sink, Broker, Clock) -> 
-  MillisToNextFrame = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToNextFrame(X) end),
+  sync:waitToNextFrame(Clock),
   
-  NewDiffs = receive 
-    {udp, _ReceiveSocket, _IP, _InPortNo, Packet} ->
-      TSReceive = clock:getMillisByFunc(Clock, fun(X) -> X end),
+  loop(Diffs, Frame, Team, Sink, Broker, Clock).
 
-      log(?LOG,receiver,["Received Packet(",size(Packet),"): ", Packet]),
+loop(Diffs, Frame, Team, Sink, Broker, Clock) -> 
+  MillisToNextFrame = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToNextFrame(X) end),
+  log(?LOG,receiver,["Time To Next Frame: ", MillisToNextFrame]),
+
+  NewDiffs = receive 
+    {newmessage,Packet} ->
+      TSReceive = clock:getMillisByFunc(Clock, fun(X) -> X end),
+      log(?LOG,receiver,["Received Packet(",size(Packet),")."]),
       Broker ! {self(), doesPacketCollide, Packet, TSReceive},
       Diffs;
 
-    {collides, _Packet} -> 
+    {collides, _Msg} -> 
+      log(?LOG,receiver,["Ignored Message."]),
       Diffs;
 
-    {notCollides, Packet, TSReceive} ->    
-      {SType,Data,_,TS} = Parsed = utils:parsePacket(Packet),
-      log(?LOG,receiver,["Parsed Packet: ", Parsed]),
-      sendToSink(Sink, Data),
+    {notCollides, {SType,Data,_,TS}, TSReceive} ->
+      log(?LOG,receiver,["Accepted Message."]),
+      sendToSink(Team, Sink, Data),
       updateDiff(SType, Diffs, TS, TSReceive)
-
 
   after MillisToNextFrame ->
     Avg = averageDiffs(Diffs),
     Clock ! {updateOffset, Avg},
     []
+
   end,
 
-  loop(NewDiffs, Frame, Sink, Broker, Clock).
+  loop(NewDiffs, Frame, Team, Sink, Broker, Clock).
 
 averageDiffs([]) -> 0;
-averageDiffs(Diffs) -> lists:sum(Diffs) / length(Diffs).
+averageDiffs(Diffs) -> round(lists:sum(Diffs) / length(Diffs)).
 
 updateDiff(SType, Diffs, TS, TSReceive) ->
   case SType of
@@ -54,11 +58,11 @@ updateDiff(SType, Diffs, TS, TSReceive) ->
       Diffs
   end.
 
-sendToSink(Sink, Data) ->
-  case ourStation(Data) of
+sendToSink(Team, Sink, Data) ->
+  case ourStation(Team, Data) of
     true -> 
-      Sink ! {newData, Data};
+      Sink ! {newData, Team, Data};
     _ -> ok
   end.
 
-ourStation(Data) -> lists:sublist(Data, 10) == "team 10-1". % TODO.
+ourStation(TeamStr, Data) -> utils:getTeam(Data) == TeamStr.

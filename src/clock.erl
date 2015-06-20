@@ -2,9 +2,12 @@
 -export([init/1,getMillisByFunc/2]).
 -import(utils,[log/3]).
 
-init(Offset) -> loop(Offset).
-
 -define(LOG,"log/clock.log").
+
+
+init(Offset) -> 
+  log(?LOG,clock,["Clock start"]),
+  loop(Offset).
 
 % PID ! {self(), getCurrentTimeMillis}
 % receive {timeMillis, MillisSince1970 } -> ... end
@@ -17,13 +20,12 @@ loop(Offset) ->
   
     {Sender, getCurrentTimeMillis} ->
       {MegaSecs, Secs, MicroSecs} = now(),
-    	Millis = ((MegaSecs*1000000 + Secs)*1000000 + 1000*Offset + MicroSecs) div 1000,
+    	Millis = (MegaSecs * 1000000000 + Secs * 1000 + MicroSecs div 1000) + Offset,
     	Sender ! {timeMillis, Millis},
     	loop(Offset);
     	
   	{updateOffset, Delta} ->
   	  NewOffset = Offset + Delta,
-  	  log(?LOG,clock,["Update offset (",Delta,"): ", NewOffset]),
   	  loop(NewOffset);
   
   	Any -> 

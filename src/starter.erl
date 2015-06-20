@@ -11,12 +11,12 @@ start(CmdArgs) ->
   DataSource = spawn(fun() -> datasource:init() end),
   DataSink = spawn(fun() -> datasink:init() end),
   
-  timer:sleep(300),
+  TeamStr = utils:getTeam(datasource:getNewSource(DataSource)),
   
   Clock = spawn(fun() -> clock:init(Offset) end),
   Broker = spawn(fun() -> slot_broker:init(Clock) end),
 
-  spawn(fun() -> receiver:init(Con,DataSink,Broker,Clock) end),
+  spawn(fun() -> receiver:init(Con,TeamStr,DataSink,Broker,Clock) end),
   spawn(fun() -> sender:init(Con,Station,DataSource,Broker,Clock) end).
 
 

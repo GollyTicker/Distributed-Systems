@@ -1,5 +1,5 @@
 -module(utils).
--export([log/3,randomInt/1, atom_to_integer/1, createPacket/4, parsePacket/1]).
+-export([log/3,randomInt/1, atom_to_integer/1, createPacket/4, parsePacket/1, getTeam/1]).
 
 % Eine Datei mit den Utilities
 
@@ -44,4 +44,4 @@ parsePacket(<<Station:1/binary,
     Slot, 
     TS }.
 
-
+getTeam(Data) -> lists:sublist(Data, 10).
