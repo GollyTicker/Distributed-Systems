@@ -5,11 +5,10 @@
 
 init(Con,Team,Sink,Broker,Clock) -> 
   log(receiver, Team, ["Receiver start"]),
+  udp_connect(Con, Team),
 
   Frame = sync:frameNoByMillis(clock:getMillis(Clock)),
   Diffs = [],
-  Self = self(),
-  spawn(fun() -> udp_receiver:init(Self, Con, Team) end),
 
   sync:waitToNextFrame(Clock),
   
@@ -24,9 +23,6 @@ loop(Diffs, Frame, Team, Sink, Broker, Clock) ->
       Broker ! {self(), doesPacketCollide, Packet, TSReceive},
       Diffs;
 
-    {collides, _Msg} -> 
-      Diffs;
-
     {notCollides, {SType,Data,_,TS}, TSReceive} ->
       sendToSink(Team, Sink, Data),
       updateDiff(SType, Diffs, TS, TSReceive)
@@ -39,6 +35,7 @@ loop(Diffs, Frame, Team, Sink, Broker, Clock) ->
   end,
 
   loop(NewDiffs, Frame, Team, Sink, Broker, Clock).
+
 
 averageDiffs([]) -> 0;
 averageDiffs(Diffs) -> round(lists:sum(Diffs) / length(Diffs)).
@@ -56,3 +53,6 @@ sendToSink(ReceiverTeam, Sink, Data) ->
   SenderTeam = utils:getTeam(Data),
   Sink ! {newData, ReceiverTeam, SenderTeam, Data}.
 
+udp_connect(Con, Team) ->
+  Self = self(),
+  spawn(fun() -> udp_receiver:init(Self, Con, Team) end).

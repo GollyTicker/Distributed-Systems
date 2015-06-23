@@ -3,13 +3,12 @@
 
 -import(utils,[log/3]).
 
-% logPath(TeamStr) -> "log/datasink-" ++ TeamStr ++ ".log".
 
 init() -> loop().
 
 loop() ->
   receive
-    {newData, _ReceiverTeam, _SenderTeam, _Data} ->
-      ok%log(logPath(ReceiverTeam), datasink, ["  Datasink: ", SenderTeam ," -> ",ReceiverTeam])
+    {newData, ReceiverTeam, SenderTeam, Data} ->
+      log(datasink, ReceiverTeam, ["Datasink: ", SenderTeam ," -> ",ReceiverTeam, " ~> ", Data])
   end,
   loop().

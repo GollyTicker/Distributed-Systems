@@ -4,62 +4,56 @@
 -import(utils,[log/3]).
 -import(datasource,[getNewSource/1]).
 
-init(Config,Station,Source,Broker,Clock,TeamStr) ->
-  log(sender, TeamStr,["Sender start"]),
+
+init(Config,Station,Source,Broker,Clock,Team) ->
+  log(sender, Team,["Sender start"]),
 
   Con = udp_connect(Config),
   CurrNr = undefined,
 
   sync:waitToNextFrame(Clock),
 
-  loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr).
+  FrameSent = 0,
+  FrameNotSent = 0,
+  loop(Con, CurrNr, Station, Source, Broker, Clock,Team,FrameSent,FrameNotSent).
 
 
-loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) -> 
+loop(Con, CurrNr, Station, Source, Broker, Clock,Team, FrameSent, FrameNotSent) -> 
   Data = getNewSource(Source),
   
   SentNextNr = case CurrNr of
     undefined ->
-      log(sender, TeamStr,["[0] CurrNr undef"]),
+      log(sender, Team,["CurrNr is undefined."]),
       undefined;
     _ ->
       M = clock:getMillis(Clock),
       TimeToWait = sync:millisToSlot(CurrNr,M),
-      %log(sender, TeamStr,["  millisToSlot(",sync:slotNoByMillis(M)," -> ",CurrNr,") => ",TimeToWait]),
       case TimeToWait >= 0 of
-        true -> 
-          %Overhead = sync:safeSleepClock(Clock,TimeToWait),
-          %log(sender, TeamStr,["Sleep overhead(ms): ",Overhead]),          
+        true ->
           sync:safeSleep(TimeToWait),
           ReserveNr = getNextFrameSlotNr(Broker),
-          sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data, TeamStr);
+          sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data, Team);
 
         false -> 
-          log(sender, TeamStr, ["[1] TimeToWait negative"]),
+          log(sender, Team, ["TimeToWait is negative, SentNextNr = undefined."]),
           undefined
       end
   end,
   
-  
   %% neue Nummer für nächstes Frame holen, falls nichts gesendet wurde.
-  case SentNextNr of
-    undefined -> 
-      % wait to a time before the end of Frame.
+  {NextNr2, NewFrameSent, NewFrameNotSent} = case SentNextNr of
+    undefined ->
       sync:waitToEndOfFrame(Clock),
-      Broker ! {self(), getNextFrameSlotNr},
-      receive
-        {nextFrameSlotNr, NextNr2} -> 
-          NextNr2
-      end;
-    NextNr2 ->
-      NextNr2
+      {getNextFrameSlotNr(Broker), FrameSent, FrameNotSent + 1};
+    _ -> 
+      {SentNextNr, FrameSent + 1, FrameNotSent}
   end,
-  
-  % log(sender, TeamStr, ["[2] asked(",Asked,"): Send in ", NextNr2, " in next Frame"]),
 
+  log(sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
   sync:waitToNextFrame(Clock),
   
-  loop(Con, NextNr2, Station, Source, Broker, Clock,TeamStr).
+  loop(Con, NextNr2, Station, Source, Broker, Clock, Team, NewFrameSent, NewFrameNotSent).
+
 
 getNextFrameSlotNr(Broker) -> 
   Broker ! {self(), getNextFrameSlotNr},
@@ -67,19 +61,15 @@ getNextFrameSlotNr(Broker) ->
     {nextFrameSlotNr, ReserveNr} ->  ReserveNr
   end.
 
-sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, TeamStr) ->
-  M = clock:getMillis(Clock),
-  SlotNr = sync:slotNoByMillis(M),
-  Frame = sync:frameNoByMillis(M),
+sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, Team) ->
+  SlotNr = sync:slotNoByMillis(clock:getMillis(Clock)),
+
   CorrectSlot = CNr == SlotNr,
   IsFree = isFree(Broker, CNr),
-  CanSendMessage = CorrectSlot and IsFree,
-  log(sender,TeamStr,
-    ["[3] Frame: ",Frame,
-      " SlotCorrect: ", CorrectSlot,
-      " IsFree: ", IsFree,
-      " ",CNr," -> ",ReserveNr]),
-  case CanSendMessage of
+  
+  log(sender,Team, ["SlotCorrect: ",CorrectSlot," IsFree: ",IsFree," ",CNr," -> ",ReserveNr]),
+  
+  case (CorrectSlot and IsFree) of
     true -> 
       {Socket, _, Port, MCA} = Con,
       Packet = createPacket(Clock,Station,Data,ReserveNr),
@@ -99,17 +89,7 @@ createPacket(Clock,Station,Data,Slot) ->
   TS = clock:getMillis(Clock),
   utils:createPacket(Station,Data,Slot,TS).
 
-
 udp_connect(Con) ->
   {IFAddr, Port, MCA} = Con,
   Socket = werkzeug:openSe(IFAddr, Port),
   {Socket, IFAddr, Port, MCA}.
-
-
-% Debugging
-checkPre({beginningOfFrame,Clock,TeamStr}) ->
-  {_F,S,ST} = sync:fstByMillis(clock:getMillis(Clock)),
-  case S of
-    1 -> ok;
-    _ -> log(sender, TeamStr, ["Not at Frame beginning! (",sync:framePercent(clock:getMillis(Clock)),") ", S, ", ",ST])
-  end.

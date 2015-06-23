@@ -9,24 +9,22 @@ start(CmdArgs) ->
   DataSource = spawn(fun() -> datasource:init() end),
   DataSink = spawn(fun() -> datasink:init() end),
   
-  TeamStr = utils:getTeam(datasource:getNewSource(DataSource)),
+  Team = utils:getTeam(datasource:getNewSource(DataSource)),
 
-  log(starter, TeamStr,["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
+  log(starter, Team,["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
                       " Port: ", Port, " Station: ", Station,
                       " Offset: ", Offset]),
   
-  Clock = spawn(fun() -> clock:init(Offset,TeamStr) end),
-  Broker = spawn(fun() -> slot_broker:init(Clock,TeamStr) end),
+  Clock = spawn(fun() -> clock:init(Offset,Team) end),
+  Broker = spawn(fun() -> slot_broker:init(Clock,Team) end),
 
-  spawn(fun() -> receiver:init(Con,TeamStr,DataSink,Broker,Clock) end),
-  spawn(fun() -> sender:init(Con,Station,DataSource,Broker,Clock,TeamStr) end).
+  spawn(fun() -> receiver:init(Con,Team,DataSink,Broker,Clock) end),
+  spawn(fun() -> sender:init(Con,Station,DataSource,Broker,Clock,Team) end).
 
 
 parseConfig([InterfaceName, McastAddress, ReceivePort, StationType, UTCoffsetMs]) ->
   IFAddr = get_interface_ip(atom_to_list(InterfaceName)),
-
-  {ok,MCAddr} = inet:parse_ipv4_address(atom_to_list(McastAddress)),
-
+  {ok, MCAddr} = inet:parse_ipv4_address(atom_to_list(McastAddress)),
   Port = atom_to_integer(ReceivePort),
   Offset = atom_to_integer(UTCoffsetMs),
   Station = atom_to_list(StationType),
