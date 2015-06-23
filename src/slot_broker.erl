@@ -3,15 +3,16 @@
 -import(utils,[log/3]).
 
 
+slots() -> lists:seq(1,25).
+
 init(Clock,TeamStr) -> 
   log(slot_broker, TeamStr, ["SlotBroker start"]),
-  Slots = lists:seq(1, 25),
-
+  
   sync:waitToNextFrame(Clock),
   
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
 
-  loop([], CurrFrame, Slots, Slots, Clock, TeamStr).
+  loop([], CurrFrame, slots(), slots(), Clock, TeamStr).
 
 
 loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, TeamStr) ->
@@ -21,7 +22,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, TeamStr) ->
   {CSlots,NSlots} = case PrevFrame < CurrFrame of
     true ->
       show(TeamStr, PrevCSlots, PrevNSlots),
-      {lists:seq(1,25),lists:seq(1,25)};
+      {slots(),slots()};
     false -> {PrevCSlots,PrevNSlots}
   end,
 
