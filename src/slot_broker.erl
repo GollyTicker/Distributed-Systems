@@ -21,7 +21,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, TeamStr) ->
   {CSlots,NSlots} = case PrevFrame < CurrFrame of
     true ->
       show(TeamStr, PrevCSlots, PrevNSlots),
-      {PrevNSlots,lists:seq(1,25)};
+      {lists:seq(1,25),lists:seq(1,25)};
     false -> {PrevCSlots,PrevNSlots}
   end,
 
@@ -72,6 +72,6 @@ getUnoccupiedSlot(Slots) ->
 
 
 show(TeamStr, PrevCSlots, PrevNSlots) ->
-  log(slot_broker, TeamStr, ["(",TeamStr,") Next Frame"]),
-  log(slot_broker, TeamStr, ["(",TeamStr,") CSlots: ", PrevCSlots]),
-  log(slot_broker, TeamStr, ["(",TeamStr,") NSlots: ", PrevNSlots]).
+  log(slot_broker, TeamStr, ["(",TeamStr,") Next Frame"]).
+  %log(slot_broker, TeamStr, ["(",TeamStr,") CSlots: ", PrevCSlots]),
+  %log(slot_broker, TeamStr, ["(",TeamStr,") NSlots: ", PrevNSlots]).

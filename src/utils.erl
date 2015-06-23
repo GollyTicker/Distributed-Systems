@@ -5,7 +5,7 @@
 
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
--define(DEBUG, true).
+-define(DEBUG, false).
 
 log(false, _, _, _) -> nolog;
 log(true, Module, Team, List) -> log(Module, Team, List).
@@ -19,15 +19,15 @@ log(Module, Team, List) ->
           false -> to_String(X)
         end
       end,
-      ModuleStr = to_String(Module),
-      Datei = logPath(ModuleStr, Team),
-      Str = ModuleStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+      ModTeamStr = to_String(Module) ++ "-" ++ Team,
+      Datei = logPath(ModTeamStr),
+      Str = ModTeamStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
       logging(Datei,Str);
     false -> nolog
   end.
 
-logPath(Module, Team) -> 
-  "log/" ++ Module ++ "-" ++ Team ++ ".log".
+logPath(ModTeamStr) -> 
+  "log/" ++ ModTeamStr ++ ".log".
 
 % return a number from 1 to Num.
 randomInt(Num) ->

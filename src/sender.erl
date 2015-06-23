@@ -73,14 +73,17 @@ getNextFrameSlotNr(Broker) ->
   end.
 
 sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, TeamStr) ->
-  SlotNr = sync:slotNoByMillis(clock:getMillis(Clock)),
-  
+  M = clock:getMillis(Clock),
+  SlotNr = sync:slotNoByMillis(M),
+  Frame = sync:frameNoByMillis(M),
   CorrectSlot = CNr == SlotNr,
   IsFree = isFree(Broker, CNr),
   CanSendMessage = CorrectSlot and IsFree,
-  %Why = case {CorrectSlot,IsFree} of
-  %  {false,false} -> 
-  log(sender, TeamStr, ["[3] Send Message? ", CanSendMessage]),
+  log(sender,TeamStr,
+    ["[3] Frame: ",Frame,
+      " SlotCorrect: ", CorrectSlot,
+      " IsFree: ", IsFree,
+      " ",CNr," -> ",ReserveNr]),
   case CanSendMessage of
     true -> 
       {Socket, _, Port, MCA} = Con,
