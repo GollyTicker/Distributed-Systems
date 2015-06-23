@@ -13,6 +13,8 @@
   waitToEndOfFrame/1
 ]).
 
+% Utilities for Synchronization
+
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
 -define(FRAME_LENGTH, 1000).
@@ -20,13 +22,14 @@
 
 slotDuration() -> ?SLOT_DURATION.
 
+
 fstByMillis(M) -> {frameNoByMillis(M), slotNoByMillis(M), slotTimeByMillis(M)}.
 
 frameNoByMillis(M) -> M div ?FRAME_LENGTH.
 slotNoByMillis(M) -> restInFrame(M) div ?SLOT_DURATION + 1.
 slotTimeByMillis(M) -> restInFrame(M) rem ?SLOT_DURATION.
-
 restInFrame(M) -> M rem ?FRAME_LENGTH.
+
 
 millisToNextFrame(M) -> ?FRAME_LENGTH - restInFrame(M).
 
@@ -34,6 +37,7 @@ millisToSlot(Slot, M) ->
   {_, CurrentSlot, RestInCurrentSlot} = fstByMillis(M),
   SlotDiff = (Slot - CurrentSlot),
   (SlotDiff * ?SLOT_DURATION) + ?SLOT_HALVE - RestInCurrentSlot.
+
 
 safeSleep(Millis) ->
   erlang:send_after(max(Millis, 0),self(),timer),

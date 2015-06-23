@@ -1,5 +1,5 @@
 -module(datasource).
--export([init/0,getNewSource/1]).
+-export([init/0,getNewData/1]).
 
 -import(io,[get_chars/2]).
 -import(utils,[log/3]).
@@ -16,7 +16,7 @@ loop() ->
       loop()
   end.
 
-getNewSource(Source) ->
+getNewData(Source) ->
   Source ! {self(),currentData},
   receive 
     {payload, Data} -> 

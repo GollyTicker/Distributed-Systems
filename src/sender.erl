@@ -2,7 +2,7 @@
 -export([init/6]).
 
 -import(utils,[log/3]).
--import(datasource,[getNewSource/1]).
+-import(datasource,[getNewData/1]).
 
 
 init(Config,Station,Source,Broker,Clock,Team) ->
@@ -11,23 +11,23 @@ init(Config,Station,Source,Broker,Clock,Team) ->
   Con = udp_connect(Config),
   CurrNr = undefined,
 
-  sync:waitToNextFrame(Clock),
+  sync:waitToNextFrame(Clock), % loop invariant
 
   FrameSent = 0,
   FrameNotSent = 0,
-  loop(Con, CurrNr, Station, Source, Broker, Clock,Team,FrameSent,FrameNotSent).
+  frameLoop(Con, CurrNr, Station, Source, Broker, Clock, Team,FrameSent,FrameNotSent).
 
 
-loop(Con, CurrNr, Station, Source, Broker, Clock,Team, FrameSent, FrameNotSent) -> 
-  Data = getNewSource(Source),
+% loop invariant: Each iteration begins its execution at the beginning of a frame.
+
+frameLoop(Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSent, FrameNotSent) -> 
+  Data = getNewData(Source),
   
   SentNextNr = case CurrNr of
-    undefined ->
-      log(sender, Team,["CurrNr is undefined."]),
-      undefined;
+    undefined -> undefined; % do nothing in very first iteration
     _ ->
-      M = clock:getMillis(Clock),
-      TimeToWait = sync:millisToSlot(CurrNr,M),
+      % scroll to the specified slot and send the message.
+      TimeToWait = sync:millisToSlot(CurrNr,clock:getMillis(Clock)),
       case TimeToWait >= 0 of
         true ->
           sync:safeSleep(TimeToWait),
@@ -40,7 +40,7 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,Team, FrameSent, FrameNotSent) 
       end
   end,
   
-  %% neue Nummer für nächstes Frame holen, falls nichts gesendet wurde.
+  %% If nothing was sent, we need a new SlotNr for the next frame.
   {NextNr2, NewFrameSent, NewFrameNotSent} = case SentNextNr of
     undefined ->
       sync:waitToEndOfFrame(Clock),
@@ -50,39 +50,42 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,Team, FrameSent, FrameNotSent) 
   end,
 
   log(sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
-  sync:waitToNextFrame(Clock),
   
-  loop(Con, NextNr2, Station, Source, Broker, Clock, Team, NewFrameSent, NewFrameNotSent).
+  sync:waitToNextFrame(Clock), % loop invariant
+  
+  frameLoop(Con, NextNr2, Station, Source, Broker, Clock, Team, NewFrameSent, NewFrameNotSent).
 
-
-getNextFrameSlotNr(Broker) -> 
-  Broker ! {self(), getNextFrameSlotNr},
-  receive
-    {nextFrameSlotNr, ReserveNr} ->  ReserveNr
-  end.
-
+% CNr:       The slot nr we have to send the message in
+% ReserveNr: The slot nr to reserve in the next frame, if we succeed
 sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, Team) ->
   SlotNr = sync:slotNoByMillis(clock:getMillis(Clock)),
 
-  CorrectSlot = CNr == SlotNr,
+  IsCorrectSlot = CNr == SlotNr,
   IsFree = isFree(Broker, CNr),
   
-  log(sender,Team, ["SlotCorrect: ",CorrectSlot," IsFree: ",IsFree," ",CNr," -> ",ReserveNr]),
+  log(sender,Team, ["IsCorrectSlot: ",IsCorrectSlot," IsFree: ",IsFree," ",CNr," -> ",ReserveNr]),
   
-  case (CorrectSlot and IsFree) of
+  case (IsCorrectSlot and IsFree) of
     true -> 
       {Socket, _, Port, MCA} = Con,
       Packet = createPacket(Clock,Station,Data,ReserveNr),
       gen_udp:send(Socket, MCA, Port, Packet),
       ReserveNr;
-    false -> undefined % Zeit verpasst oder occupied
+    false -> undefined
   end.
+
 
 isFree(Broker, CNr) ->
   Broker ! {self(), isFree, CNr},
   receive
     free -> true;
     occupied -> false     
+  end.
+
+getNextFrameSlotNr(Broker) -> 
+  Broker ! {self(), getNextFrameSlotNr},
+  receive
+    {nextFrameSlotNr, ReserveNr} ->  ReserveNr
   end.
 
 createPacket(Clock,Station,Data,Slot) ->

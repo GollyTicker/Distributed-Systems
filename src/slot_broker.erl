@@ -8,6 +8,7 @@ slots() -> lists:seq(1,25).
 init(Clock,Team) -> 
   log(slot_broker, Team, ["SlotBroker start"]),
   
+  % the first loop iteration has to begin at the beginning of a frame.
   sync:waitToNextFrame(Clock),
   
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
@@ -15,31 +16,35 @@ init(Clock,Team) ->
   loop([], CurrFrame, slots(), slots(), Clock, Team).
 
 
+% Prev* are the variables of the previous loop iteration
 loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
 
-  % Frameübergang
+  % Reset slot-variables on frame transition
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
   {CSlots,NSlots} = case PrevFrame < CurrFrame of
-    true ->
-      {slots(),slots()};
+    true  -> {slots(),slots()};
     false -> {PrevCSlots,PrevNSlots}
   end,
 
   SlotTime = sync:slotTimeByMillis(clock:getMillis(Clock)),
 
   receive
+    % Receiver service
+    % multiple-times per slot. CSlots reseted per frame.
     {PID, doesPacketCollide, Packet, TS} ->
       CSlot = sync:slotNoByMillis(clock:getMillis(Clock)),
       NewCSlots = lists:delete(CSlot,CSlots),
       NewRequests = [{PID, utils:parsePacket(Packet), TS}|Requests],
       loop(NewRequests, CurrFrame, NewCSlots, NSlots, Clock,Team);
 
-    % Sender
+    % Sender services
+    % at any given point.
     {PID, getNextFrameSlotNr} ->
       NFSN = getUnoccupiedSlot(NSlots),
       PID ! {nextFrameSlotNr, NFSN},
       loop(Requests, CurrFrame, CSlots, NSlots, Clock,Team);
 
+    % during the middle of a slot, right before the sender aims to send.
     {PID, isFree, Slot} ->
       PID ! case lists:member(Slot, CSlots) of
         true -> free;
@@ -47,8 +52,11 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
       end,
       loop(Requests, CurrFrame, CSlots, NSlots, Clock,Team)
 
+  % receiver service
+  % at the end of each slot.
+  % Detect collision or valiate message to receiver.
   after 
-    sync:slotDuration() - SlotTime ->
+    sync:slotDuration() - SlotTime -> 
       case Requests of 
         []  -> 
           loop([], CurrFrame, CSlots, NSlots, Clock,Team);
@@ -66,9 +74,11 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
 
   end.
 
+
 getUnoccupiedSlot(Slots) ->
   N = utils:randomInt(length(Slots)),
   lists:nth(N, Slots).
+
 
 collisionLog(Team, Requests) ->
   {_,{_,_,Slot,_},_} = hd(Requests),

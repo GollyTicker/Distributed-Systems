@@ -9,7 +9,7 @@ start(CmdArgs) ->
   DataSource = spawn(fun() -> datasource:init() end),
   DataSink = spawn(fun() -> datasink:init() end),
   
-  Team = utils:getTeam(datasource:getNewSource(DataSource)),
+  Team = utils:getTeam(datasource:getNewData(DataSource)),
 
   log(starter, Team,["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
                       " Port: ", Port, " Station: ", Station,

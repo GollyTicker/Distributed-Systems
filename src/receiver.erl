@@ -14,8 +14,8 @@ init(Con,Team,Sink,Broker,Clock) ->
   
   loop(Diffs, Frame, Team, Sink, Broker, Clock).
 
+
 loop(Diffs, Frame, Team, Sink, Broker, Clock) -> 
-  MillisToNextFrame = sync:millisToNextFrame(clock:getMillis(Clock)),
 
   NewDiffs = receive 
     {newmessage,Packet} ->
@@ -27,7 +27,8 @@ loop(Diffs, Frame, Team, Sink, Broker, Clock) ->
       sendToSink(Team, Sink, Data),
       updateDiff(SType, Diffs, TS, TSReceive)
 
-  after MillisToNextFrame ->
+    % once each frame: use the diffs to update the clock.
+  after sync:millisToNextFrame(clock:getMillis(Clock)) ->
     Avg = averageDiffs(Diffs),
     Clock ! {updateOffset, Avg},
     []
