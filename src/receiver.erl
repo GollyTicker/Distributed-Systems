@@ -3,15 +3,15 @@
 
 -import(utils,[log/3]).
 
--define(LOG, "log/receiver.log").
+logPath(TeamStr) -> "log/receiver-" ++ TeamStr ++ ".log".
 
 init(Con,Team,Sink,Broker,Clock) -> 
-  log(?LOG,receiver,["Receiver start"]),
+  log(logPath(Team),receiver,["Receiver start"]),
 
   {Frame, _, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
   Diffs = [],
   Self = self(),
-  spawn(fun() -> udp_receiver:init(Self, Con) end),
+  spawn(fun() -> udp_receiver:init(Self, Con, Team) end),
 
   sync:waitToNextFrame(Clock),
   
@@ -19,21 +19,17 @@ init(Con,Team,Sink,Broker,Clock) ->
 
 loop(Diffs, Frame, Team, Sink, Broker, Clock) -> 
   MillisToNextFrame = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToNextFrame(X) end),
-  log(?LOG,receiver,["Time To Next Frame: ", MillisToNextFrame]),
 
   NewDiffs = receive 
     {newmessage,Packet} ->
       TSReceive = clock:getMillisByFunc(Clock, fun(X) -> X end),
-      log(?LOG,receiver,["Received Packet(",size(Packet),")."]),
       Broker ! {self(), doesPacketCollide, Packet, TSReceive},
       Diffs;
 
     {collides, _Msg} -> 
-      log(?LOG,receiver,["Ignored Message."]),
       Diffs;
 
     {notCollides, {SType,Data,_,TS}, TSReceive} ->
-      log(?LOG,receiver,["Accepted Message."]),
       sendToSink(Team, Sink, Data),
       updateDiff(SType, Diffs, TS, TSReceive)
 
@@ -58,11 +54,7 @@ updateDiff(SType, Diffs, TS, TSReceive) ->
       Diffs
   end.
 
-sendToSink(Team, Sink, Data) ->
-  case ourStation(Team, Data) of
-    true -> 
-      Sink ! {newData, Team, Data};
-    _ -> ok
-  end.
+sendToSink(ReceiverTeam, Sink, Data) ->
+  SenderTeam = utils:getTeam(Data),
+  Sink ! {newData, ReceiverTeam, SenderTeam, Data}.
 
-ourStation(TeamStr, Data) -> utils:getTeam(Data) == TeamStr.

@@ -9,7 +9,8 @@ debugMode() -> true.
 
 % Aufruf:
 % log(0,hbq,["Hallo ",self()," ",[1,2]]).
-log(Datei,Module,List) -> 
+log(Datei,Module,List) -> %0.
+%log2(Datei,Module,List) ->
   F = fun(X) ->
     case io_lib:printable_list(X) of
       true -> X;
@@ -23,9 +24,7 @@ log(Datei,Module,List) ->
   end.
 
 
-randomInt(Num) ->
-  random:seed(erlang:now()),
-  random:uniform(Num).
+randomInt(Num) -> random:uniform(Num).
 
 atom_to_integer(X) -> list_to_integer(atom_to_list(X)).
 

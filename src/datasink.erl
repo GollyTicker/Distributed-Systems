@@ -3,13 +3,13 @@
 
 -import(utils,[log/3]).
 
--define(LOG, "log/datasink.log").
+logPath(TeamStr) -> "log/datasink-" ++ TeamStr ++ ".log".
 
 init() -> loop().
 
 loop() ->
   receive
-    {newData, Team, Data} ->
-      log(?LOG, datansink, ["Datasink (from: ", Team ,") received: ", utils:getTeam(Data)])
+    {newData, ReceiverTeam, SenderTeam, Data} ->
+      log(logPath(ReceiverTeam), datasink, ["  Datasink: ", SenderTeam ," -> ",ReceiverTeam])
   end,
   loop().

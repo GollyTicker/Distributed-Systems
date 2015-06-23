@@ -1,13 +1,13 @@
 -module(clock).
--export([init/1,getMillisByFunc/2]).
+-export([init/2,getMillisByFunc/2]).
 -import(utils,[log/3]).
 
--define(LOG,"log/clock.log").
+logPath(TeamStr) -> "log/clock-" ++ TeamStr ++ ".log".
 
 
-init(Offset) -> 
-  log(?LOG,clock,["Clock start"]),
-  loop(Offset).
+init(Offset,TeamStr) -> 
+  log(logPath(TeamStr),clock,["Clock start"]),
+  loop(Offset,TeamStr).
 
 % PID ! {self(), getCurrentTimeMillis}
 % receive {timeMillis, MillisSince1970 } -> ... end
@@ -15,24 +15,26 @@ init(Offset) ->
 % PID ! {updateOffset, Delta}
 % no response.
 
-loop(Offset) ->
+loop(Offset,TeamStr) ->
   receive
   
     {Sender, getCurrentTimeMillis} ->
-      {MegaSecs, Secs, MicroSecs} = now(),
-    	Millis = (MegaSecs * 1000000000 + Secs * 1000 + MicroSecs div 1000) + Offset,
+    	Millis = unixMillis() + Offset,
     	Sender ! {timeMillis, Millis},
-    	loop(Offset);
+    	loop(Offset,TeamStr);
     	
   	{updateOffset, Delta} ->
   	  NewOffset = Offset + Delta,
-  	  loop(NewOffset);
+  	  loop(NewOffset,TeamStr);
   
   	Any -> 
-      log(?LOG, clock, ["Received unknown message: ", Any])
+      log(logPath(TeamStr), clock, ["Received unknown message: ", Any])
     	
   end.
 
+unixMillis() ->
+  {MegaSecs, Secs, MicroSecs} = now(),
+  MegaSecs * 1000000000 + Secs * 1000 + MicroSecs div 1000.
 
 getMillisByFunc(Clock, Func) ->
   Clock ! {self(), getCurrentTimeMillis},

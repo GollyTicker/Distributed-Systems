@@ -4,7 +4,7 @@
 -import(io,[get_chars/2]).
 -import(utils,[log/3]).
 
--define(LOG, "log/datasource.log").
+logPath(TeamStr) -> "log/datasource-" ++ TeamStr ++ ".log".
 
 % Abfrage der aktuellen 24 Bytes: 
 % PID ! {self(),currentData}
@@ -17,7 +17,7 @@ loop() ->
     
     {Sender,currentData} ->
       Chars = get_chars('',24),
-      log(?LOG, datasource,["Read: ", utils:getTeam(Chars), " ..."]),
+      % log(logPath(utils:getTeam(Chars)), datasource,["Read: ", utils:getTeam(Chars), " ..."]),
       Sender ! {payload,Chars},
       loop()
 
