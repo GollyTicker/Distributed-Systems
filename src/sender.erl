@@ -22,12 +22,8 @@ init(InitalCon,Station,Source,Broker,Clock,TeamStr) ->
 loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) -> 
   Data = getNewSource(Source),
   
-  %should be at the beginning of Frame:
-  {_F,S,ST} = sync:fstByMillis(clock:getMillis(Clock)),
-  case S of
-    1 -> ok;
-    _ -> log(logPath(TeamStr),sender,["Not at Frame beginning! ", S, ", ",ST])
-  end,
+  
+  checkPre({beginningOfFrame,Clock,TeamStr}),
   
   SentNextNr = case CurrNr of
     undefined ->
@@ -60,12 +56,10 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) ->
       Broker ! {self(), getNextFrameSlotNr},
       receive
         {nextFrameSlotNr, NextNr2} -> 
-          NextNr2,
-          Asked = true
+          NextNr2
       end;
     NextNr2 ->
-      NextNr2,
-      Asked = true
+      NextNr2
   end,
   
   % log(logPath(TeamStr),sender,["[2] asked(",Asked,"): Send in ", NextNr2, " in next Frame"]),
@@ -108,5 +102,12 @@ isFree(Broker, CNr) ->
 createPacket(Clock,Station,Data,Slot) ->
   TS = clock:getMillis(Clock),
   utils:createPacket(Station,Data,Slot,TS).
+
+checkPre({beginningOfFrame,Clock,TeamStr}) ->
+  {_F,S,ST} = sync:fstByMillis(clock:getMillis(Clock)),
+  case S of
+    1 -> ok;
+    _ -> log(logPath(TeamStr),sender,["Not at Frame beginning! (",sync:framePercent(clock:getMillis(Clock)),") ", S, ", ",ST])
+  end.
 
 

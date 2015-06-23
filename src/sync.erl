@@ -10,7 +10,8 @@
   safeSleep/1,
   waitToNextFrame/1,
   slot_duration/0,
-  waitToEndOfFrame/1
+  waitToEndOfFrame/1,
+  framePercent/1
   %,safeSleepClock/2
   ]).
 
@@ -52,11 +53,20 @@ framePercent(M) -> werkzeug:to_String(restInFrame(M)/10) ++ "%".
 
 waitToNextFrame(Clock) ->
   M = clock:getMillis(Clock),
+  FrameBefore = frameNoByMillis(M),
   Bef = framePercent(M),
   
   MillisToNextFrame = millisToNextFrame(M),
   
   safeSleep(MillisToNextFrame),
+  
+  FrameAfter = frameNoByMillis(clock:getMillis(Clock)),
+  
+  % check, that we are now in the next Frame
+  case (FrameBefore == FrameAfter) of
+    true -> waitToNextFrame(Clock); % wait more.
+    false -> ok % ok
+  end,
   
   Aft = framePercent(clock:getMillis(Clock)),
   {Bef,Aft}.
