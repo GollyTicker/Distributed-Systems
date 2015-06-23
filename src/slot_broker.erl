@@ -72,8 +72,8 @@ getUnoccupiedSlot(Slots) ->
 
 collisionLog(Team, Requests) ->
   {_,{_,_,Slot,_},_} = hd(Requests),
-  Teams = lists:map(fun({_,{_,TeamBytes,_,_},_}) -> util:getTeam(TeamBytes) end, Requests),
+  Teams = lists:map(fun({_,{_,TeamBytes,_,_},_}) -> utils:getTeam(TeamBytes) end, Requests),
   AreWeMembers = lists:member(Team, Teams),
-  log(slot_broker, Team, ["Collision in slot: ", Slot," Teams: ["] ++ str:join(Teams, ", ") ++ ["] Member? ", AreWeMembers]).
+  log(slot_broker, Team, ["Collision in slot: ", Slot," Teams: [",string:join(Teams, ", "),"] Member? ", AreWeMembers]).
 
 

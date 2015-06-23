@@ -9,6 +9,6 @@ init() -> loop().
 loop() ->
   receive
     {newData, ReceiverTeam, SenderTeam, Data} ->
-      log(datasink, ReceiverTeam, ["Datasink: ", SenderTeam ," -> ",ReceiverTeam, " ~> ", Data])
+      log(datasink, ReceiverTeam, ["Datasink: ", SenderTeam ," -> ",ReceiverTeam, " :: ", Data])
   end,
   loop().

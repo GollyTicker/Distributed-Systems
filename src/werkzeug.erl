@@ -46,12 +46,13 @@ logstop( ) -> 	Known = erlang:whereis(logklc),
 					_NotUndef -> logklc ! kill, true
 				end.
 					
-logloop(Y) -> 	receive
-					{Datei,Inhalt} -> io:format(Inhalt),
-									  file:write_file(Datei,Inhalt,[append]),
-									  logloop(Y+1);
-					kill -> true
-				end.
+logloop(Y) ->
+  receive
+		{Datei,Inhalt} ->
+		  file:write_file(Datei,Inhalt,[append]),
+		  logloop(Y+1);
+	kill -> true
+end.
 
 %% -------------------------------------------
 %%

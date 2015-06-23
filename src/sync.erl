@@ -15,7 +15,6 @@
 
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
--define(SLEEP_OFFSET, 3). % TODO: Do we need this?
 -define(FRAME_LENGTH, 1000).
 -define(BEFORE_FRAME_END_OFFSET, 10).
 
@@ -37,7 +36,7 @@ millisToSlot(Slot, M) ->
   (SlotDiff * ?SLOT_DURATION) + ?SLOT_HALVE - RestInCurrentSlot.
 
 safeSleep(Millis) ->
-  erlang:send_after(max(Millis - ?SLEEP_OFFSET, 0),self(),timer),
+  erlang:send_after(max(Millis, 0),self(),timer),
   receive timer -> ok end.
 
 waitToNextFrame(Clock) ->

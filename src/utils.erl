@@ -3,7 +3,9 @@
 
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
--define(DEBUG, false).
+-define(DEBUG, true).
+
+-define(VERBOSE, false).
 
 log(false, _, _, _) -> nolog;
 log(true, Module, Team, List) -> log(Module, Team, List).
@@ -18,16 +20,21 @@ log(Module, Team, List) ->
         end
       end,
       ModTeamStr = to_String(Module) ++ "-" ++ Team,
-      Datei = logPath(ModTeamStr),
+      Datei = logPath(Team),
       Str = ModTeamStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+      case ?VERBOSE of
+        true -> io:format(Str);
+        false -> ok
+      end,
       logging(Datei,Str);
     false -> nolog
   end.
 
-logPath(ModTeamStr) -> 
-  "log/" ++ ModTeamStr ++ ".log".
+logPath(Str) -> 
+  "log/" ++ Str ++ ".log".
 
 % return a number from 1 to Num.
+% randomInt(Num) -> random:seed(now()), random:uniform(Num).
 randomInt(Num) ->
   RandInt255 = hd(binary_to_list(crypto:strong_rand_bytes(1))), % 0 .. 255, int
   RandIntNminus1 = RandInt255/255*(Num-1), % 0 .. (N - 1), float

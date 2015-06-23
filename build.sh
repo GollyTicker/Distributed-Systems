@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm -rf log/*
+rm -rf out/log/*
 rm -rf out/*.beam
 
 cd src
