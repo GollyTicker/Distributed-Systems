@@ -41,7 +41,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock,TeamStr) ->
     {PID, getNextFrameSlotNr} ->
       NFSN = getUnoccupiedSlot(NSlots),
       PID ! {nextFrameSlotNr, NFSN},
-      log(logPath(TeamStr),slot_broker,["GFSN: ", NFSN]),
+      % log(logPath(TeamStr),slot_broker,["GFSN: ", NFSN]),
       loop(Requests, CurrFrame, CSlots, NSlots, Clock,TeamStr);
 
     {PID, isFree, Slot} ->

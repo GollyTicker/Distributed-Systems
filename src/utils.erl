@@ -17,7 +17,7 @@ log(Datei,Module,List) -> %0.
       false -> to_String(X)
     end
   end,
-  Str = to_String(Module) ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+  Str = to_String(Datei) ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
   case debugMode() of
     true -> logging(Datei,Str);
     false -> ok %io:format(Str)

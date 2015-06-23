@@ -16,7 +16,7 @@ mcastAddress=225.10.1.2
 receivePort=15010
 UTCoffsetMs=10
 
-./startStations.sh $interfaceName $mcastAddress $receivePort 1 5 A $UTCoffsetMs
+./startStations.sh $interfaceName $mcastAddress $receivePort 1 2 A $UTCoffsetMs
 
 # ./startStations.sh $interfaceName $mcastAddress $receivePort 2 4 B $UTCoffsetMs
 

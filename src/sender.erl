@@ -15,26 +15,40 @@ init(InitalCon,Station,Source,Broker,Clock,TeamStr) ->
 
   CurrNr = undefined,
 
-  sync:waitToNextFrame(Clock),
+  {Bef,Aft} = sync:waitToNextFrame(Clock),
+  log(logPath(TeamStr),sender,["WaitToNext ",Bef," -> ",Aft]),
 
   loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr).
 
 loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) -> 
   Data = getNewSource(Source),
   
+  %should be at the beginning of Frame:
+  {_F,S,ST} = sync:fstByMillis(clock:getMillis(Clock)),
+  case S of
+    1 -> ok;
+    _ -> log(logPath(TeamStr),sender,["Not at Frame beginning! ", S, ", ",ST])
+  end,
+  
   SentNextNr = case CurrNr of
-    undefined -> undefined;
+    undefined ->
+      log(logPath(TeamStr),sender,["[0] CurrNr undef"]),
+      undefined;
     _ ->
-      TimeToWait = sync:millisToSlot(CurrNr,clock:getMillis(Clock)),
+      M = clock:getMillis(Clock),
+      TimeToWait = sync:millisToSlot(CurrNr,M),
+      % log(logPath(TeamStr),sender,["  millisToSlot(",sync:slotNoByMillis(M)," -> ",CurrNr,") => ",TimeToWait]),
       case TimeToWait >= 0 of
         true -> 
           %Overhead = sync:safeSleepClock(Clock,TimeToWait),
           %log(logPath(TeamStr),sender,["Sleep overhead(ms): ",Overhead]),          
           sync:safeSleep(TimeToWait),
           ReserveNr = getNextFrameSlotNr(Broker),
-          sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data,TeamStr);
+          sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data, TeamStr);
 
-        false -> undefined
+        false -> 
+          log(logPath(TeamStr),sender,["[1] TimeToWait negative"]),
+          undefined
       end
   end,
   
@@ -43,16 +57,23 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) ->
   case SentNextNr of
     undefined -> 
       % wait to a time before the end of Frame.
-      sync:waitToEndOfFrame(Clock),
+      {Bef1,Aft1} = sync:waitToEndOfFrame(Clock),
+      log(logPath(TeamStr),sender,["WaitToEnd ",Bef1," -> ",Aft1]),
       Broker ! {self(), getNextFrameSlotNr},
       receive
         {nextFrameSlotNr, NextNr2} -> 
-          NextNr2
+          NextNr2,
+          Asked = true
       end;
-    NextNr2 -> NextNr2
+    NextNr2 ->
+      NextNr2,
+      Asked = true
   end,
+  
+  % log(logPath(TeamStr),sender,["[2] asked(",Asked,"): Send in ", NextNr2, " in next Frame"]),
 
-  sync:waitToNextFrame(Clock),
+  {Bef,Aft} = sync:waitToNextFrame(Clock),
+  log(logPath(TeamStr),sender,["WaitToNext ",Bef," -> ",Aft]),
   
   loop(Con, NextNr2, Station, Source, Broker, Clock,TeamStr).
 
@@ -62,15 +83,15 @@ getNextFrameSlotNr(Broker) ->
     {nextFrameSlotNr, ReserveNr} ->  ReserveNr
   end.
 
-sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data,TeamStr) ->
-  SlotNr = sync:slotNoByMillis(clock:getMillisByFunc(Clock)),
+sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, TeamStr) ->
+  SlotNr = sync:slotNoByMillis(clock:getMillis(Clock)),
   
   CorrectSlot = CNr == SlotNr,
-  IsFree = isFree(Broker, CNr)
+  IsFree = isFree(Broker, CNr),
   CanSendMessage = CorrectSlot and IsFree,
-  Why = case {CorrectSlot,IsFree} of
-    {false,false} -> 
-  log(logPath(TeamStr),sender,["Send Message? ", Why]),
+  %Why = case {CorrectSlot,IsFree} of
+  %  {false,false} -> 
+  log(logPath(TeamStr),sender,["[3] Send Message? ", CanSendMessage]),
   case CanSendMessage of
     true -> 
       {Socket, _, Port, MCA} = Con,

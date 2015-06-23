@@ -32,7 +32,7 @@ millisToNextFrame(M) -> restInFrame(M).
 millisToSlot(Slot, M) ->
   {_, CurrentSlot, RestInCurrentSlot} = fstByMillis(M),
   SlotDiff = (Slot - CurrentSlot),
-  (SlotDiff * slot_duration()) - (?SLOT_HALVE - RestInCurrentSlot).
+  (SlotDiff * slot_duration()) + ?SLOT_HALVE - RestInCurrentSlot.
 
 safeSleep(Millis) ->
   erlang:send_after(Millis,self(),timer),
@@ -40,7 +40,9 @@ safeSleep(Millis) ->
   
 %  timer:sleep(max(Millis - ?SLEEP_OFFSET, 0)).
 % maybe polling or multiple-sleeps?
-  
+
+framePercent(M) -> werkzeug:to_String(restInFrame(M)/10) ++ "%".
+
 safeSleepClock(Clock,Millis) ->
   Before = clock:getMillis(Clock),
   timer:sleep(max(Millis - ?SLEEP_OFFSET, 0)),
@@ -50,11 +52,23 @@ safeSleepClock(Clock,Millis) ->
   Overhead.
 
 waitToNextFrame(Clock) ->
-  MillisToNextFrame = millisToNextFrame(clock:getMillis(Clock)),
-  safeSleep(MillisToNextFrame).
+  M = clock:getMillis(Clock),
+  Bef = framePercent(M),
+  
+  MillisToNextFrame = millisToNextFrame(M),
+  safeSleep(MillisToNextFrame),
+  
+  Aft = framePercent(clock:getMillis(Clock)),
+  {Bef,Aft}.
   
 waitToEndOfFrame(Clock) ->
-  MillisToEndOfFrame = millisToNextFrame(clock:getMillis(Clock)),
-  safeSleep(MillisToEndOfFrame).
+  M = clock:getMillis(Clock),
+  Bef = framePercent(M),
+  
+  MillisToEndOfFrame = millisToNextFrame(clock:getMillis(Clock)) - 15,
+  safeSleep(MillisToEndOfFrame),
+  
+  Aft = framePercent(clock:getMillis(Clock)),
+  {Bef,Aft}.
 
 
