@@ -70,8 +70,6 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock,TeamStr) ->
 
   end.
 
-s(X) -> werkzeug:to_String(X).
-
 getUnoccupiedSlot(Slots) ->
   N = utils:randomInt(length(Slots)),
   lists:nth(N, Slots).
