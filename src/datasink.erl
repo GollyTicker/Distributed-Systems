@@ -9,7 +9,7 @@ init() -> loop().
 
 loop() ->
   receive
-    {newData, ReceiverTeam, SenderTeam, Data} ->
+    {newData, ReceiverTeam, SenderTeam, _Data} ->
       log(logPath(ReceiverTeam), datasink, ["  Datasink: ", SenderTeam ," -> ",ReceiverTeam])
   end,
   loop().

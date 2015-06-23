@@ -14,29 +14,26 @@ init(InitalCon,Station,Source,Broker,Clock,TeamStr) ->
   Con = {Socket, IFAddr, Port, MCA},
 
   CurrNr = undefined,
-  NextNr = undefined,
 
   sync:waitToNextFrame(Clock),
 
-  loop(Con, CurrNr, NextNr, Station, Source, Broker, Clock,TeamStr).
+  loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr).
 
-loop(Con, CurrNr, NextNr, Station, Source, Broker, Clock,TeamStr) -> 
+loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) -> 
   Data = getNewSource(Source),
   
-
   SentNextNr = case CurrNr of
     undefined -> undefined;
     _ ->
-      TimeToWait = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToSlot(CurrNr, X) end),
+      TimeToWait = sync:millisToSlot(CurrNr,clock:getMillis(Clock)),
       case TimeToWait >= 0 of
         true -> 
+          %Overhead = sync:safeSleepClock(Clock,TimeToWait),
+          %log(logPath(TeamStr),sender,["Sleep overhead(ms): ",Overhead]),          
           sync:safeSleep(TimeToWait),
-          Broker ! {self(), getNextFrameSlotNr},
-          receive
-            {nextFrameSlotNr, ReserveNr} -> 
-              ReserveNr
-          end,
+          ReserveNr = getNextFrameSlotNr(Broker),
           sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data,TeamStr);
+
         false -> undefined
       end
   end,
@@ -45,13 +42,13 @@ loop(Con, CurrNr, NextNr, Station, Source, Broker, Clock,TeamStr) ->
   %% neue Nummer für nächstes Frame holen, falls nichts gesendet wurde.
   case SentNextNr of
     undefined -> 
-      %% TODO:
       % wait to a time before the end of Frame.
+      sync:waitToEndOfFrame(Clock),
       Broker ! {self(), getNextFrameSlotNr},
       receive
         {nextFrameSlotNr, NextNr2} -> 
           NextNr2
-      end,
+      end;
     NextNr2 -> NextNr2
   end,
 
@@ -59,19 +56,27 @@ loop(Con, CurrNr, NextNr, Station, Source, Broker, Clock,TeamStr) ->
   
   loop(Con, NextNr2, Station, Source, Broker, Clock,TeamStr).
 
+getNextFrameSlotNr(Broker) -> 
+  Broker ! {self(), getNextFrameSlotNr},
+  receive
+    {nextFrameSlotNr, ReserveNr} ->  ReserveNr
+  end.
+
 sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data,TeamStr) ->
-  {_, SlotNr, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
-  CanSendMessage =
-    true
-    or (CNr == SlotNr)
-    and isFree(Broker, CNr),
-  log(logPath(TeamStr),sender,["Send Message? ", CanSendMessage]),
+  SlotNr = sync:slotNoByMillis(clock:getMillisByFunc(Clock)),
+  
+  CorrectSlot = CNr == SlotNr,
+  IsFree = isFree(Broker, CNr)
+  CanSendMessage = CorrectSlot and IsFree,
+  Why = case {CorrectSlot,IsFree} of
+    {false,false} -> 
+  log(logPath(TeamStr),sender,["Send Message? ", Why]),
   case CanSendMessage of
     true -> 
       {Socket, _, Port, MCA} = Con,
       Packet = createPacket(Clock,Station,Data,ReserveNr),
       gen_udp:send(Socket, MCA, Port, Packet),
-      ReserveNr
+      ReserveNr;
     false -> undefined % Zeit verpasst oder occupied
   end.
 
@@ -83,7 +88,7 @@ isFree(Broker, CNr) ->
   end.
 
 createPacket(Clock,Station,Data,Slot) ->
-  TS = clock:getMillisByFunc(Clock, fun(X) -> X end),
+  TS = clock:getMillis(Clock),
   utils:createPacket(Station,Data,Slot,TS).
 
 

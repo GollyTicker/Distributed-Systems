@@ -4,7 +4,7 @@
 -import(io,[get_chars/2]).
 -import(utils,[log/3]).
 
-logPath(TeamStr) -> "log/datasource-" ++ TeamStr ++ ".log".
+% logPath(TeamStr) -> "log/datasource-" ++ TeamStr ++ ".log".
 
 % Abfrage der aktuellen 24 Bytes: 
 % PID ! {self(),currentData}

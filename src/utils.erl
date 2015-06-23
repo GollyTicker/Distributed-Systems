@@ -24,7 +24,9 @@ log(Datei,Module,List) -> %0.
   end.
 
 
-randomInt(Num) -> random:uniform(Num).
+randomInt(Num) ->
+  random:seed(now()),
+  random:uniform(Num).
 
 atom_to_integer(X) -> list_to_integer(atom_to_list(X)).
 

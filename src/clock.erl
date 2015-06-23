@@ -1,5 +1,5 @@
 -module(clock).
--export([init/2,getMillisByFunc/2]).
+-export([init/2,getMillisByFunc/2,getMillis/1]).
 -import(utils,[log/3]).
 
 logPath(TeamStr) -> "log/clock-" ++ TeamStr ++ ".log".
@@ -43,5 +43,10 @@ getMillisByFunc(Clock, Func) ->
       Func(Millis)
   end.
 
-
+getMillis(Clock) ->
+  Clock ! {self(), getCurrentTimeMillis},
+  receive 
+    {timeMillis, Millis} -> 
+      Millis
+  end.
 

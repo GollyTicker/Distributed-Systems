@@ -10,7 +10,7 @@ init(Clock,TeamStr) ->
 
   sync:waitToNextFrame(Clock),
   
-  {CurrFrame, _, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
+  CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
 
   loop([], CurrFrame, Slots, Slots, Clock,TeamStr).
 
@@ -18,28 +18,30 @@ init(Clock,TeamStr) ->
 loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock,TeamStr) ->
 
   % Frameübergang
-  {CurrFrame, _, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
+  CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
   {CSlots,NSlots} = case PrevFrame < CurrFrame of
     true ->
-      log(logPath(TeamStr),slot_broker,["(",TeamStr,") Next Frame"]),
-      log(logPath(TeamStr),slot_broker,["(",TeamStr,") CSlots: ", PrevCSlots]),
-      log(logPath(TeamStr),slot_broker,["(",TeamStr,") NSlots: ", PrevNSlots]),
+      %log(logPath(TeamStr),slot_broker,["(",TeamStr,") Next Frame"]),
+      %log(logPath(TeamStr),slot_broker,["(",TeamStr,") CSlots: ", PrevCSlots]),
+      %log(logPath(TeamStr),slot_broker,["(",TeamStr,") NSlots: ", PrevNSlots]),
       {PrevNSlots,lists:seq(1,25)};
     false -> {PrevCSlots,PrevNSlots}
   end,
 
-  {_, _, SlotTime} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
+  SlotTime = sync:slotTimeByMillis(clock:getMillis(Clock)),
 
   receive
     {PID, doesPacketCollide, Packet, TS} ->
-      {_, CSlot, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
+      CSlot = sync:slotNoByMillis(clock:getMillis(Clock)),
       NewCSlots = lists:delete(CSlot,CSlots),
       NewRequests = [{PID, utils:parsePacket(Packet), TS}|Requests],
       loop(NewRequests, CurrFrame, NewCSlots, NSlots, Clock,TeamStr);
 
     % Sender
     {PID, getNextFrameSlotNr} ->
-      PID ! {nextFrameSlotNr, getUnoccupiedSlot(NSlots)},
+      NFSN = getUnoccupiedSlot(NSlots),
+      PID ! {nextFrameSlotNr, NFSN},
+      log(logPath(TeamStr),slot_broker,["GFSN: ", NFSN]),
       loop(Requests, CurrFrame, CSlots, NSlots, Clock,TeamStr);
 
     {PID, isFree, Slot} ->

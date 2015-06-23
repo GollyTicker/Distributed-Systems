@@ -8,7 +8,7 @@ logPath(TeamStr) -> "log/receiver-" ++ TeamStr ++ ".log".
 init(Con,Team,Sink,Broker,Clock) -> 
   log(logPath(Team),receiver,["Receiver start"]),
 
-  {Frame, _, _} = clock:getMillisByFunc(Clock, fun(X) -> sync:fstByMillis(X) end),
+  Frame = sync:frameNoByMillis(clock:getMillis(Clock)),
   Diffs = [],
   Self = self(),
   spawn(fun() -> udp_receiver:init(Self, Con, Team) end),
@@ -18,11 +18,11 @@ init(Con,Team,Sink,Broker,Clock) ->
   loop(Diffs, Frame, Team, Sink, Broker, Clock).
 
 loop(Diffs, Frame, Team, Sink, Broker, Clock) -> 
-  MillisToNextFrame = clock:getMillisByFunc(Clock, fun(X) -> sync:millisToNextFrame(X) end),
+  MillisToNextFrame = sync:millisToNextFrame(clock:getMillis(Clock)),
 
   NewDiffs = receive 
     {newmessage,Packet} ->
-      TSReceive = clock:getMillisByFunc(Clock, fun(X) -> X end),
+      TSReceive = clock:getMillis(Clock),
       Broker ! {self(), doesPacketCollide, Packet, TSReceive},
       Diffs;
 
