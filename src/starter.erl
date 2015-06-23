@@ -5,6 +5,8 @@
 logPath(TeamStr) -> "log/starter-" ++ TeamStr ++ ".log".
 
 start(CmdArgs) ->
+
+  random:seed(now()),
   
   {IFAddr, MCAddr, Port, Station, Offset} = parseConfig(CmdArgs),
   Con = {IFAddr, Port, MCAddr},

@@ -15,8 +15,7 @@ init(InitalCon,Station,Source,Broker,Clock,TeamStr) ->
 
   CurrNr = undefined,
 
-  {Bef,Aft} = sync:waitToNextFrame(Clock),
-  log(logPath(TeamStr),sender,["WaitToNext ",Bef," -> ",Aft]),
+  sync:waitToNextFrame(Clock),
 
   loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr).
 
@@ -57,8 +56,7 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) ->
   case SentNextNr of
     undefined -> 
       % wait to a time before the end of Frame.
-      {Bef1,Aft1} = sync:waitToEndOfFrame(Clock),
-      log(logPath(TeamStr),sender,["WaitToEnd ",Bef1," -> ",Aft1]),
+      sync:waitToEndOfFrame(Clock),
       Broker ! {self(), getNextFrameSlotNr},
       receive
         {nextFrameSlotNr, NextNr2} -> 
@@ -72,8 +70,7 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) ->
   
   % log(logPath(TeamStr),sender,["[2] asked(",Asked,"): Send in ", NextNr2, " in next Frame"]),
 
-  {Bef,Aft} = sync:waitToNextFrame(Clock),
-  log(logPath(TeamStr),sender,["WaitToNext ",Bef," -> ",Aft]),
+  sync:waitToNextFrame(Clock),
   
   loop(Con, NextNr2, Station, Source, Broker, Clock,TeamStr).
 

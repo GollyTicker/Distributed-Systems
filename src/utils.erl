@@ -24,9 +24,11 @@ log(Datei,Module,List) -> %0.
   end.
 
 
+% return a number from 1 to Num.
 randomInt(Num) ->
-  random:seed(now()),
-  random:uniform(Num).
+  RandInt255 = hd(binary_to_list(crypto:strong_rand_bytes(1))), % 0 .. 255, int
+  RandIntNminus1 = RandInt255/255*(Num-1), % 0 .. (N - 1), float
+  trunc(RandIntNminus1) + 1. % 1 .. N, int
 
 atom_to_integer(X) -> list_to_integer(atom_to_list(X)).
 
