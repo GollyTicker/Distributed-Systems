@@ -19,8 +19,9 @@ log(Module, Team, List) ->
           false -> to_String(X)
         end
       end,
-      Datei = logPath(Module, Team),
-      Str = Module ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+      ModuleStr = to_String(Module),
+      Datei = logPath(ModuleStr, Team),
+      Str = ModuleStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
       logging(Datei,Str);
     false -> nolog
   end.
