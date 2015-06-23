@@ -4,24 +4,19 @@
 -import(utils,[log/3]).
 -import(datasource,[getNewSource/1]).
 
-init(InitalCon,Station,Source,Broker,Clock,TeamStr) ->
+init(Config,Station,Source,Broker,Clock,TeamStr) ->
   log(sender, TeamStr,["Sender start"]),
 
-  {IFAddr, Port, MCA} = InitalCon,
-  Socket = werkzeug:openSe(IFAddr, Port),
-  Con = {Socket, IFAddr, Port, MCA},
-
+  Con = udp_connect(Config),
   CurrNr = undefined,
 
   sync:waitToNextFrame(Clock),
 
   loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr).
 
+
 loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) -> 
   Data = getNewSource(Source),
-  
-  
-  checkPre({beginningOfFrame,Clock,TeamStr}),
   
   SentNextNr = case CurrNr of
     undefined ->
@@ -104,11 +99,17 @@ createPacket(Clock,Station,Data,Slot) ->
   TS = clock:getMillis(Clock),
   utils:createPacket(Station,Data,Slot,TS).
 
+
+udp_connect(Con) ->
+  {IFAddr, Port, MCA} = Con,
+  Socket = werkzeug:openSe(IFAddr, Port),
+  {Socket, IFAddr, Port, MCA}.
+
+
+% Debugging
 checkPre({beginningOfFrame,Clock,TeamStr}) ->
   {_F,S,ST} = sync:fstByMillis(clock:getMillis(Clock)),
   case S of
     1 -> ok;
     _ -> log(sender, TeamStr, ["Not at Frame beginning! (",sync:framePercent(clock:getMillis(Clock)),") ", S, ", ",ST])
   end.
-
-

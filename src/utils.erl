@@ -1,8 +1,6 @@
 -module(utils).
 -export([log/3,log/4,randomInt/1, atom_to_integer/1, createPacket/4, parsePacket/1, getTeam/1]).
 
-% Eine Datei mit den Utilities
-
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
 -define(DEBUG, false).

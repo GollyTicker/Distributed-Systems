@@ -21,7 +21,6 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, TeamStr) ->
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
   {CSlots,NSlots} = case PrevFrame < CurrFrame of
     true ->
-      show(TeamStr, PrevCSlots, PrevNSlots),
       {slots(),slots()};
     false -> {PrevCSlots,PrevNSlots}
   end,
@@ -70,9 +69,3 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, TeamStr) ->
 getUnoccupiedSlot(Slots) ->
   N = utils:randomInt(length(Slots)),
   lists:nth(N, Slots).
-
-
-show(TeamStr, PrevCSlots, PrevNSlots) ->
-  log(slot_broker, TeamStr, ["(",TeamStr,") Next Frame"]).
-  %log(slot_broker, TeamStr, ["(",TeamStr,") CSlots: ", PrevCSlots]),
-  %log(slot_broker, TeamStr, ["(",TeamStr,") NSlots: ", PrevNSlots]).

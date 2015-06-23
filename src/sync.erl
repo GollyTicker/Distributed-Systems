@@ -10,22 +10,22 @@
   millisToSlot/2,
   safeSleep/1,
   waitToNextFrame/1,
-  waitToEndOfFrame/1,
-  framePercent/1
-  ]).
+  waitToEndOfFrame/1
+]).
 
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
--define(SLEEP_OFFSET, 3).
+-define(SLEEP_OFFSET, 3). % TODO: Do we need this?
 -define(FRAME_LENGTH, 1000).
+-define(BEFORE_FRAME_END_OFFSET, 10).
 
 slotDuration() -> ?SLOT_DURATION.
 
 fstByMillis(M) -> {frameNoByMillis(M), slotNoByMillis(M), slotTimeByMillis(M)}.
 
 frameNoByMillis(M) -> M div ?FRAME_LENGTH.
-slotNoByMillis(M) -> restInFrame(M) div 40 + 1.
-slotTimeByMillis(M) -> restInFrame(M) rem 40.
+slotNoByMillis(M) -> restInFrame(M) div ?SLOT_DURATION + 1.
+slotTimeByMillis(M) -> restInFrame(M) rem ?SLOT_DURATION.
 
 restInFrame(M) -> M rem ?FRAME_LENGTH.
 
@@ -43,7 +43,6 @@ safeSleep(Millis) ->
 waitToNextFrame(Clock) ->
   M = clock:getMillis(Clock),
   FrameBefore = frameNoByMillis(M),
-  Bef = framePercent(M),
   
   MillisToNextFrame = millisToNextFrame(M),
   
@@ -55,20 +54,9 @@ waitToNextFrame(Clock) ->
   case (FrameBefore == FrameAfter) of
     true -> waitToNextFrame(Clock); % wait more.
     false -> ok % ok
-  end,
-  
-  Aft = framePercent(clock:getMillis(Clock)),
-  {Bef,Aft}.
+  end.
   
 waitToEndOfFrame(Clock) ->
-  M = clock:getMillis(Clock),
-  Bef = framePercent(M),
-  
-  MillisToEndOfFrame = millisToNextFrame(clock:getMillis(Clock)) - 15,
-  safeSleep(MillisToEndOfFrame),
-  
-  Aft = framePercent(clock:getMillis(Clock)),
-  {Bef,Aft}.
-
-framePercent(M) -> werkzeug:to_String(restInFrame(M)/10) ++ "%".
+  MillisToEndOfFrame = millisToNextFrame(clock:getMillis(Clock)) - ?BEFORE_FRAME_END_OFFSET,
+  safeSleep(MillisToEndOfFrame).
 
