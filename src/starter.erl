@@ -2,12 +2,7 @@
 -export([start/1]).
 -import(utils,[log/3, atom_to_integer/1]).
 
-logPath(TeamStr) -> "log/starter-" ++ TeamStr ++ ".log".
-
 start(CmdArgs) ->
-
-  random:seed(now()),
-  
   {IFAddr, MCAddr, Port, Station, Offset} = parseConfig(CmdArgs),
   Con = {IFAddr, Port, MCAddr},
 
@@ -16,7 +11,7 @@ start(CmdArgs) ->
   
   TeamStr = utils:getTeam(datasource:getNewSource(DataSource)),
 
-  log(logPath(TeamStr), starter, ["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
+  log(starter, TeamStr,["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
                       " Port: ", Port, " Station: ", Station,
                       " Offset: ", Offset]),
   

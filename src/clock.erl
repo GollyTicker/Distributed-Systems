@@ -2,19 +2,10 @@
 -export([init/2,getMillisByFunc/2,getMillis/1]).
 -import(utils,[log/3]).
 
-logPath(TeamStr) -> "log/clock-" ++ TeamStr ++ ".log".
-
-
 init(Offset,TeamStr) -> 
-  log(logPath(TeamStr),clock,["Clock start"]),
+  log(clock, TeamStr, ["Clock start"]),
   loop(Offset,TeamStr).
-
-% PID ! {self(), getCurrentTimeMillis}
-% receive {timeMillis, MillisSince1970 } -> ... end
-
-% PID ! {updateOffset, Delta}
-% no response.
-
+  
 loop(Offset,TeamStr) ->
   receive
   
@@ -28,7 +19,7 @@ loop(Offset,TeamStr) ->
   	  loop(NewOffset,TeamStr);
   
   	Any -> 
-      log(logPath(TeamStr), clock, ["Received unknown message: ", Any])
+      log(clock, TeamStr, ["Received unknown message: ", Any])
     	
   end.
 

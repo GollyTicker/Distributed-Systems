@@ -3,10 +3,8 @@
 
 -import(utils,[log/3]).
 
-logPath(TeamStr) -> "log/receiver-" ++ TeamStr ++ ".log".
-
 init(Con,Team,Sink,Broker,Clock) -> 
-  log(logPath(Team),receiver,["Receiver start"]),
+  log(receiver, Team, ["Receiver start"]),
 
   Frame = sync:frameNoByMillis(clock:getMillis(Clock)),
   Diffs = [],

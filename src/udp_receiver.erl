@@ -3,10 +3,8 @@
 
 -import(utils,[log/3]).
 
-logPath(TeamStr) -> "log/udp-" ++ TeamStr ++ ".log".
-
 init(PID, Con, TeamStr) ->
-  log(logPath(TeamStr), upd_receiver, ["UDP Receiver start"]),
+  log(upd_receiver, TeamStr, ["UDP Receiver start"]),
   {IFAddr, Port, MCA} = Con,
   Socket = werkzeug:openRec(MCA, IFAddr, Port),
   gen_udp:controlling_process(Socket, self()), 

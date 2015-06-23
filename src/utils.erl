@@ -7,22 +7,23 @@
 
 debugMode() -> true.
 
-% Aufruf:
-% log(0,hbq,["Hallo ",self()," ",[1,2]]).
-log(Datei,Module,List) -> %0.
-%log2(Datei,Module,List) ->
-  F = fun(X) ->
-    case io_lib:printable_list(X) of
-      true -> X;
-      false -> to_String(X)
-    end
-  end,
-  Str = to_String(Datei) ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+log(Module, Team, List) ->
   case debugMode() of
-    true -> logging(Datei,Str);
-    false -> ok %io:format(Str)
+    true ->
+      F = fun(X) ->
+        case io_lib:printable_list(X) of
+          true -> X;
+          false -> to_String(X)
+        end
+      end,
+      Datei = logPath(Module, Team),
+      Str = Module ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+      logging(Datei,Str);
+    _ -> ok
   end.
 
+logPath(Module, Team) -> 
+  "log/" ++ Module ++ "-" ++ Team ++ ".log".
 
 % return a number from 1 to Num.
 randomInt(Num) ->
