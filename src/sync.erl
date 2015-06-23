@@ -5,51 +5,40 @@
   frameNoByMillis/1,
   slotNoByMillis/1,
   slotTimeByMillis/1,
+  slotDuration/0,
   millisToNextFrame/1,
   millisToSlot/2,
   safeSleep/1,
   waitToNextFrame/1,
-  slot_duration/0,
   waitToEndOfFrame/1,
   framePercent/1
-  %,safeSleepClock/2
   ]).
 
+-define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
 -define(SLEEP_OFFSET, 3).
+-define(FRAME_LENGTH, 1000).
 
-slot_duration() -> 40.
+slotDuration() -> ?SLOT_DURATION.
 
-% {Frame, Slot, SlotRest}
 fstByMillis(M) -> {frameNoByMillis(M), slotNoByMillis(M), slotTimeByMillis(M)}.
 
-frameNoByMillis(M) -> M div 1000.
+frameNoByMillis(M) -> M div ?FRAME_LENGTH.
 slotNoByMillis(M) -> restInFrame(M) div 40 + 1.
 slotTimeByMillis(M) -> restInFrame(M) rem 40.
 
-restInFrame(M) -> M rem 1000.
+restInFrame(M) -> M rem ?FRAME_LENGTH.
 
-millisToNextFrame(M) -> 1000 - restInFrame(M).
+millisToNextFrame(M) -> ?FRAME_LENGTH - restInFrame(M).
 
 millisToSlot(Slot, M) ->
   {_, CurrentSlot, RestInCurrentSlot} = fstByMillis(M),
   SlotDiff = (Slot - CurrentSlot),
-  (SlotDiff * slot_duration()) + ?SLOT_HALVE - RestInCurrentSlot.
+  (SlotDiff * ?SLOT_DURATION) + ?SLOT_HALVE - RestInCurrentSlot.
 
 safeSleep(Millis) ->
   erlang:send_after(max(Millis - ?SLEEP_OFFSET, 0),self(),timer),
   receive timer -> ok end.
-%  timer:sleep(max(Millis - ?SLEEP_OFFSET, 0)).
-
-framePercent(M) -> werkzeug:to_String(restInFrame(M)/10) ++ "%".
-
-%safeSleepClock(Clock,Millis) ->
-%  Before = clock:getMillis(Clock),
-%  timer:sleep(max(Millis - ?SLEEP_OFFSET, 0)),
-%  After = clock:getMillis(Clock),
-%  TrueWait = After - Before,
-%  Overhead = TrueWait - Millis,
-%  Overhead.
 
 waitToNextFrame(Clock) ->
   M = clock:getMillis(Clock),
@@ -81,4 +70,5 @@ waitToEndOfFrame(Clock) ->
   Aft = framePercent(clock:getMillis(Clock)),
   {Bef,Aft}.
 
+framePercent(M) -> werkzeug:to_String(restInFrame(M)/10) ++ "%".
 

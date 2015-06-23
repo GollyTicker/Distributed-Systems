@@ -4,10 +4,8 @@
 -import(utils,[log/3]).
 -import(datasource,[getNewSource/1]).
 
-logPath(TeamStr) -> "log/sender-" ++ TeamStr ++ ".log".
-
 init(InitalCon,Station,Source,Broker,Clock,TeamStr) ->
-  log(logPath(TeamStr),sender,["Sender start"]),
+  log(sender, TeamStr,["Sender start"]),
 
   {IFAddr, Port, MCA} = InitalCon,
   Socket = werkzeug:openSe(IFAddr, Port),
@@ -27,22 +25,22 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) ->
   
   SentNextNr = case CurrNr of
     undefined ->
-      log(logPath(TeamStr),sender,["[0] CurrNr undef"]),
+      log(sender, TeamStr,["[0] CurrNr undef"]),
       undefined;
     _ ->
       M = clock:getMillis(Clock),
       TimeToWait = sync:millisToSlot(CurrNr,M),
-      % log(logPath(TeamStr),sender,["  millisToSlot(",sync:slotNoByMillis(M)," -> ",CurrNr,") => ",TimeToWait]),
+      %log(sender, TeamStr,["  millisToSlot(",sync:slotNoByMillis(M)," -> ",CurrNr,") => ",TimeToWait]),
       case TimeToWait >= 0 of
         true -> 
           %Overhead = sync:safeSleepClock(Clock,TimeToWait),
-          %log(logPath(TeamStr),sender,["Sleep overhead(ms): ",Overhead]),          
+          %log(sender, TeamStr,["Sleep overhead(ms): ",Overhead]),          
           sync:safeSleep(TimeToWait),
           ReserveNr = getNextFrameSlotNr(Broker),
           sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data, TeamStr);
 
         false -> 
-          log(logPath(TeamStr),sender,["[1] TimeToWait negative"]),
+          log(sender, TeamStr, ["[1] TimeToWait negative"]),
           undefined
       end
   end,
@@ -62,7 +60,7 @@ loop(Con, CurrNr, Station, Source, Broker, Clock,TeamStr) ->
       NextNr2
   end,
   
-  % log(logPath(TeamStr),sender,["[2] asked(",Asked,"): Send in ", NextNr2, " in next Frame"]),
+  % log(sender, TeamStr, ["[2] asked(",Asked,"): Send in ", NextNr2, " in next Frame"]),
 
   sync:waitToNextFrame(Clock),
   
@@ -82,7 +80,7 @@ sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, TeamStr) ->
   CanSendMessage = CorrectSlot and IsFree,
   %Why = case {CorrectSlot,IsFree} of
   %  {false,false} -> 
-  log(logPath(TeamStr),sender,["[3] Send Message? ", CanSendMessage]),
+  log(sender, TeamStr, ["[3] Send Message? ", CanSendMessage]),
   case CanSendMessage of
     true -> 
       {Socket, _, Port, MCA} = Con,
@@ -107,7 +105,7 @@ checkPre({beginningOfFrame,Clock,TeamStr}) ->
   {_F,S,ST} = sync:fstByMillis(clock:getMillis(Clock)),
   case S of
     1 -> ok;
-    _ -> log(logPath(TeamStr),sender,["Not at Frame beginning! (",sync:framePercent(clock:getMillis(Clock)),") ", S, ", ",ST])
+    _ -> log(sender, TeamStr, ["Not at Frame beginning! (",sync:framePercent(clock:getMillis(Clock)),") ", S, ", ",ST])
   end.
 
 

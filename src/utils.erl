@@ -7,8 +7,11 @@
 
 -define(DEBUG, true).
 
+log(false, Module, Team, List) -> nolog;
+log(true, Module, Team, List) -> log(Module, Team, List).
+
 log(Module, Team, List) ->
-  case DEBUG of
+  case ?DEBUG of
     true ->
       F = fun(X) ->
         case io_lib:printable_list(X) of

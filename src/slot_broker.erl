@@ -11,10 +11,10 @@ init(Clock,TeamStr) ->
   
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
 
-  loop([], CurrFrame, Slots, Slots, Clock,TeamStr).
+  loop([], CurrFrame, Slots, Slots, Clock, TeamStr).
 
 
-loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock,TeamStr) ->
+loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, TeamStr) ->
 
   % Frameübergang
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
@@ -48,7 +48,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock,TeamStr) ->
       loop(Requests, CurrFrame, CSlots, NSlots, Clock,TeamStr)
 
   after 
-    sync:slot_duration() - SlotTime ->
+    sync:slotDuration() - SlotTime ->
       case Requests of 
         []  -> 
           loop([], CurrFrame, CSlots, NSlots, Clock,TeamStr);
