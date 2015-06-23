@@ -5,10 +5,10 @@
 
 -import(werkzeug,[to_String/1,logging/2,type_is/1]).
 
-debugMode() -> true.
+-define(DEBUG, true).
 
 log(Module, Team, List) ->
-  case debugMode() of
+  case DEBUG of
     true ->
       F = fun(X) ->
         case io_lib:printable_list(X) of
@@ -19,7 +19,7 @@ log(Module, Team, List) ->
       Datei = logPath(Module, Team),
       Str = Module ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
       logging(Datei,Str);
-    _ -> ok
+    false -> nolog
   end.
 
 logPath(Module, Team) -> 
