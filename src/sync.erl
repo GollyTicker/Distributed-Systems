@@ -18,7 +18,7 @@
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
 -define(FRAME_LENGTH, 1000).
--define(BEFORE_FRAME_END_OFFSET, 10).
+-define(BEFORE_FRAME_END_OFFSET, 5).
 
 slotDuration() -> ?SLOT_DURATION.
 

@@ -16,6 +16,7 @@ loop(Offset,TeamStr) ->
     	
   	{updateOffset, Delta} ->
   	  NewOffset = Offset + Delta,
+          log(clock, TeamStr, ["Offset: ", NewOffset]),
   	  loop(NewOffset,TeamStr);
   
   	Any -> 

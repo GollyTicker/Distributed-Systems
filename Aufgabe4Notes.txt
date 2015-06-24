@@ -1,8 +1,0 @@
-
-Notizen zu Aufgabe 4:
-* Erlang, Empfangen von Nachrichten (werkzeug.erl):
-  * Aktives Empfangen, nicht-blockierendes Anfragen ob ein Paket angekommen ist.
-  * Passives Empfeangen, blockierend im Erlang-receive ein Paket empfangen
-* Zeitkritisch! Möglichst wenig Arbeit direkt vor dem Senden und nach dem
-  Abfragen des OS-Timestamps machen!
-
