@@ -1,7 +1,7 @@
 -module(datasink).
 -export([init/0]).
 
--import(utils,[log/3]).
+-import(utils,[log/4]).
 
 
 init() -> loop().
@@ -9,6 +9,6 @@ init() -> loop().
 loop() ->
   receive
     {newData, ReceiverTeam, SenderTeam, Data} ->
-      log(datasink, ReceiverTeam, ["Datasink: ", SenderTeam ," -> ",ReceiverTeam, " :: ", Data])
+      log(false,datasink, ReceiverTeam, ["Datasink: ", SenderTeam ," -> ",ReceiverTeam, " :: ", Data])
   end,
   loop().

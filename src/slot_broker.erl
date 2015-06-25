@@ -13,40 +13,38 @@ init(Clock,Team) ->
   
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
 
-  loop([], CurrFrame, slots(), slots(), Clock, Team).
+  loop([], CurrFrame, slots(), slots(), [], Clock, Team).
 
 
 % Prev* are the variables of the previous loop iteration
-loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
+loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, PrevCollSlots, Clock, Team) ->
 
   % Reset slot-variables on frame transition
-  CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
-  {CSlots,NSlots} = case PrevFrame < CurrFrame of
+  {CurrFrame,CurrSlot,SlotTime} = sync:fstByMillis(clock:getMillis(Clock)),
+  {CSlots,NSlots,CollSlots} = case PrevFrame < CurrFrame of
     true  ->
-      log(slot_broker, Team, ["Free CSlots: ", PrevCSlots]),
-      log(slot_broker, Team, ["Free NSlots: ", PrevNSlots]),
+      %log(slot_broker, Team, ["Free CSlots: ", PrevCSlots]),
+      %log(slot_broker, Team, ["Free NSlots: ", PrevNSlots]),
+      %log(slot_broker, Team, ["CollSlots  : ", PrevCollSlots]),
       log(slot_broker, Team, [" ===== ",CurrFrame," ===== "]),
-      {slots(),slots()};
-    false -> {PrevCSlots,PrevNSlots}
+      {slots(),slots(),[]};
+    false -> {PrevCSlots,PrevNSlots,PrevCollSlots}
   end,
-
-  SlotTime = sync:slotTimeByMillis(clock:getMillis(Clock)),
 
   receive
     % Receiver service
     % multiple-times per slot. CSlots reseted per frame.
     {PID, doesPacketCollide, Packet, TS} ->
-      CSlot = sync:slotNoByMillis(clock:getMillis(Clock)),
-      NewCSlots = lists:delete(CSlot,CSlots),
+      NewCSlots = lists:delete(CurrSlot,CSlots),
       NewRequests = [{PID, utils:parsePacket(Packet), TS}|Requests],
-      loop(NewRequests, CurrFrame, NewCSlots, NSlots, Clock,Team);
+      loop(NewRequests, CurrFrame, NewCSlots, NSlots, CollSlots, Clock,Team);
 
     % Sender services
     % at any given point.
     {PID, getNextFrameSlotNr} ->
       NFSN = getUnoccupiedSlot(NSlots),
       PID ! {nextFrameSlotNr, NFSN},
-      loop(Requests, CurrFrame, CSlots, NSlots, Clock,Team);
+      loop(Requests, CurrFrame, CSlots, NSlots, CollSlots, Clock,Team);
 
     % during the middle of a slot, right before the sender aims to send.
     {PID, isFree, Slot} ->
@@ -54,7 +52,12 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
         true -> free;
         false -> occupied
       end,
-      loop(Requests, CurrFrame, CSlots, NSlots, Clock,Team)
+      loop(Requests, CurrFrame, CSlots, NSlots, CollSlots, Clock,Team);
+      
+    % at the end of each frame, the sender asks, whether the sent message collided with any other message
+    {PID, didSlotCollide, SlotNr} ->
+      PID ! lists:member(SlotNr,CollSlots),
+      loop(Requests, CurrFrame, CSlots, NSlots, CollSlots, Clock,Team)
 
   % receiver service
   % at the end of each slot.
@@ -63,17 +66,18 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
     sync:slotDuration() - SlotTime -> 
       case Requests of 
         []  -> 
-          loop([], CurrFrame, CSlots, NSlots, Clock,Team);
+          loop([], CurrFrame, CSlots, NSlots, CollSlots, Clock,Team);
 
         [{PID, Msg, TS}] ->
           {_,_,NSlot,_} = Msg,
           NewNSlots = lists:delete(NSlot,NSlots),
           PID ! {notCollides, Msg, TS},
-          loop([], CurrFrame, CSlots, NewNSlots, Clock,Team);
+          loop([], CurrFrame, CSlots, NewNSlots, CollSlots, Clock,Team);
 
         _ -> 
           collisionLog(Team, Requests),
-          loop([], CurrFrame, CSlots, NSlots, Clock,Team)
+          NewCollSlots = [CurrSlot|CollSlots],
+          loop([], CurrFrame, CSlots, NSlots, NewCollSlots, Clock,Team)
       end
 
   end.

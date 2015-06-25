@@ -16,7 +16,10 @@ loop(Offset,TeamStr) ->
     	
   	{updateOffset, Delta} ->
   	  NewOffset = Offset + Delta,
-          log(clock, TeamStr, ["Offset: ", NewOffset]),
+      case Delta >= 5 of
+        true -> log(clock, TeamStr, ["Larger update: Delta, ",Delta,", NewOffset: ", NewOffset]);
+        false -> ok
+      end,
   	  loop(NewOffset,TeamStr);
   
   	Any -> 

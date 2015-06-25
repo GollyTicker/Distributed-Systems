@@ -60,6 +60,15 @@ waitToNextFrame(Clock) ->
   end.
   
 waitToEndOfFrame(Clock) ->
-  MillisToEndOfFrame = millisToNextFrame(clock:getMillis(Clock)) - ?BEFORE_FRAME_END_OFFSET,
-  safeSleep(MillisToEndOfFrame).
+  M = clock:getMillis(Clock),
+  MillisToEndOfFrame = millisToNextFrame(M) - ?BEFORE_FRAME_END_OFFSET,
+  
+  {_,Bslot,Bslottime} = fstByMillis(M),
+  SlotCount = ?FRAME_LENGTH div ?SLOT_DURATION,
+  case (Bslot =:= SlotCount) and (Bslottime > MillisToEndOfFrame) of
+    true -> ok; % no more wait
+    false ->
+      safeSleep(MillisToEndOfFrame div 2),
+      waitToEndOfFrame(Clock)
+  end.
 

@@ -40,21 +40,22 @@ frameLoop(Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSent, FrameNot
       end
   end,
   
+  ShouldBeFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
   sync:waitToEndOfFrame(Clock), % at the end of the frame
+  checkPre(endOfFrame,Clock,Team,ShouldBeFrame),
   % If nothing was sent, we need a new SlotNr for the next frame.
   % If something was sent, check whether it didn't accidently collide. If so, then forget the reservation nr.
   NothingSent = (SentNextNr =:= undefined),
-  OurSlotCollided = not isFree(Broker,CurrNr),
+  OurSlotCollided = case CurrNr of undefined -> false; _ -> ourSlotCollided(Broker,CurrNr) end,
   
+  CFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
   {NextNr2, NewFrameSent, NewFrameNotSent} =
     case (NothingSent or OurSlotCollided) of
-      true  ->  {getNextFrameSlotNr(Broker), FrameSent, FrameNotSent + 1};
-      false ->  {SentNextNr, FrameSent + 1, FrameNotSent}
-  end,
-  
-  case ((not NothingSent) and OurSlotCollided) of
-    true -> log(sender, Team, ["Our Sent Message Collided: ", CurrNr]);
-    false -> ok
+      true  ->  Nr = getNextFrameSlotNr(Broker),
+                log(sender, Team, ["frame: ",CFrame, " - Failed. Trying my luck with ", Nr, " next frame"]),
+                {Nr, FrameSent, FrameNotSent + 1};
+      false ->  log(sender, Team, ["frame: ",CFrame, " - Sending successful. Reserved ", SentNextNr]),
+                {SentNextNr, FrameSent + 1, FrameNotSent}
   end,
 
   log(sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
@@ -82,6 +83,16 @@ sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, Team) ->
     false -> undefined
   end.
 
+checkPre(endOfFrame,Clock,Team,ShouldBeFrame) ->
+  {WasFrame,SlotNr,SlotTime} = FST = sync:fstByMillis(clock:getMillis(Clock)),
+  case ((SlotNr =:= 25) and (SlotTime> 20) and (ShouldBeFrame =:= WasFrame)) of
+    true -> ok;
+    false -> log(sender,Team,["Precondition violated: ShouldBeFrame ",ShouldBeFrame,", EndOfFrame failed with fst ", FST])
+  end.
+
+ourSlotCollided(Broker,CurrNr) ->
+  Broker ! {self(), didSlotCollide, CurrNr},
+  receive Bool -> Bool end.
 
 isFree(Broker, CNr) ->
   Broker ! {self(), isFree, CNr},
