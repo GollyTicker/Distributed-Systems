@@ -10,7 +10,9 @@
   millisToSlot/2,
   safeSleep/1,
   waitToNextFrame/1,
-  waitToEndOfFrame/1
+  waitToNextFrame2/2,
+  waitToEndOfFrame/1,
+  beforeSlotEndsOffset/0
 ]).
 
 % Utilities for Synchronization
@@ -18,9 +20,11 @@
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
 -define(FRAME_LENGTH, 1000).
--define(BEFORE_FRAME_END_OFFSET, 5).
+-define(BEFORE_FRAME_END_OFFSET, 8).
+-define(BEFORE_SLOTS_ENDS_OFFSET, 6).
 
 slotDuration() -> ?SLOT_DURATION.
+beforeSlotEndsOffset() -> ?BEFORE_SLOTS_ENDS_OFFSET.
 
 
 fstByMillis(M) -> {frameNoByMillis(M), slotNoByMillis(M), slotTimeByMillis(M)}.
@@ -29,7 +33,6 @@ frameNoByMillis(M) -> M div ?FRAME_LENGTH.
 slotNoByMillis(M) -> restInFrame(M) div ?SLOT_DURATION + 1.
 slotTimeByMillis(M) -> restInFrame(M) rem ?SLOT_DURATION.
 restInFrame(M) -> M rem ?FRAME_LENGTH.
-
 
 millisToNextFrame(M) -> ?FRAME_LENGTH - restInFrame(M).
 
@@ -42,6 +45,15 @@ millisToSlot(Slot, M) ->
 safeSleep(Millis) ->
   erlang:send_after(max(Millis, 0),self(),timer),
   receive timer -> ok end.
+
+waitToNextFrame2(BeforeF,Clock) ->
+  M = clock:getMillis(Clock),
+  CurrF = frameNoByMillis(M),
+  case (CurrF =:= BeforeF) of
+    true -> waitToNextFrame(Clock);
+    false -> ok
+  end.
+  
 
 waitToNextFrame(Clock) ->
   M = clock:getMillis(Clock),
@@ -62,13 +74,5 @@ waitToNextFrame(Clock) ->
 waitToEndOfFrame(Clock) ->
   M = clock:getMillis(Clock),
   MillisToEndOfFrame = millisToNextFrame(M) - ?BEFORE_FRAME_END_OFFSET,
-  
-  {_,Bslot,Bslottime} = fstByMillis(M),
-  SlotCount = ?FRAME_LENGTH div ?SLOT_DURATION,
-  case (Bslot =:= SlotCount) and (Bslottime > MillisToEndOfFrame) of
-    true -> ok; % no more wait
-    false ->
-      safeSleep(MillisToEndOfFrame div 2),
-      waitToEndOfFrame(Clock)
-  end.
+  safeSleep(MillisToEndOfFrame).
 
