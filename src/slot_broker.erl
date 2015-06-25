@@ -22,7 +22,11 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, Clock, Team) ->
   % Reset slot-variables on frame transition
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
   {CSlots,NSlots} = case PrevFrame < CurrFrame of
-    true  -> {slots(),slots()};
+    true  ->
+      log(slot_broker, Team, ["Free CSlots: ", PrevCSlots]),
+      log(slot_broker, Team, ["Free NSlots: ", PrevNSlots]),
+      log(slot_broker, Team, [" ===== ",CurrFrame," ===== "]),
+      {slots(),slots()};
     false -> {PrevCSlots,PrevNSlots}
   end,
 

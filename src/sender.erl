@@ -40,13 +40,21 @@ frameLoop(Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSent, FrameNot
       end
   end,
   
-  %% If nothing was sent, we need a new SlotNr for the next frame.
-  {NextNr2, NewFrameSent, NewFrameNotSent} = case SentNextNr of
-    undefined ->
-      sync:waitToEndOfFrame(Clock),
-      {getNextFrameSlotNr(Broker), FrameSent, FrameNotSent + 1};
-    _ -> 
-      {SentNextNr, FrameSent + 1, FrameNotSent}
+  sync:waitToEndOfFrame(Clock), % at the end of the frame
+  % If nothing was sent, we need a new SlotNr for the next frame.
+  % If something was sent, check whether it didn't accidently collide. If so, then forget the reservation nr.
+  NothingSent = (SentNextNr =:= undefined),
+  OurSlotCollided = not isFree(Broker,CurrNr),
+  
+  {NextNr2, NewFrameSent, NewFrameNotSent} =
+    case (NothingSent or OurSlotCollided) of
+      true  ->  {getNextFrameSlotNr(Broker), FrameSent, FrameNotSent + 1};
+      false ->  {SentNextNr, FrameSent + 1, FrameNotSent}
+  end,
+  
+  case ((not NothingSent) and OurSlotCollided) of
+    true -> log(sender, Team, ["Our Sent Message Collided: ", CurrNr]);
+    false -> ok
   end,
 
   log(sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
