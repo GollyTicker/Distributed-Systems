@@ -1,21 +1,21 @@
 -module(receiver).
--export([init/5]).
+-export([init/6]).
 
--import(utils,[log/3]).
+-import(utils,[log/4]).
 
-init(Con,Team,Sink,Broker,Clock) -> 
-  log(receiver, Team, ["Receiver start"]),
-  udp_connect(Con, Team),
+init(Con,Team,Sink,Broker,Clock,DS) -> 
+  log(DS,receiver, Team, ["Receiver start"]),
+  udp_connect(Con, Team,DS),
 
   Frame = sync:frameNoByMillis(clock:getMillis(Clock)),
   Diffs = [],
 
   sync:waitToNextFrame(Clock),
   
-  loop(Diffs, Frame, Team, Sink, Broker, Clock).
+  loop(Diffs, Frame, Team, Sink, Broker, Clock,DS).
 
 
-loop(Diffs, Frame, Team, Sink, Broker, Clock) -> 
+loop(Diffs, Frame, Team, Sink, Broker, Clock,DS) -> 
 
   NewDiffs = receive 
     {newmessage,Packet} ->
@@ -35,7 +35,7 @@ loop(Diffs, Frame, Team, Sink, Broker, Clock) ->
 
   end,
 
-  loop(NewDiffs, Frame, Team, Sink, Broker, Clock).
+  loop(NewDiffs, Frame, Team, Sink, Broker, Clock,DS).
 
 
 averageDiffs([]) -> 0;
@@ -54,6 +54,6 @@ sendToSink(ReceiverTeam, Sink, Data) ->
   SenderTeam = utils:getTeam(Data),
   Sink ! {newData, ReceiverTeam, SenderTeam, Data}.
 
-udp_connect(Con, Team) ->
+udp_connect(Con, Team,DS) ->
   Self = self(),
-  spawn(fun() -> udp_receiver:init(Self, Con, Team) end).
+  spawn(fun() -> udp_receiver:init(Self, Con, Team,DS) end).

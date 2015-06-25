@@ -1,25 +1,25 @@
 -module(starter).
 -export([start/1]).
--import(utils,[log/3, atom_to_integer/1]).
+-import(utils,[log/4, atom_to_integer/1]).
 
 start(CmdArgs) ->
   {IFAddr, MCAddr, Port, Station, Offset} = parseConfig(CmdArgs),
   Con = {IFAddr, Port, MCAddr},
 
-  DataSource = spawn(fun() -> datasource:init() end),
   DataSink = spawn(fun() -> datasink:init() end),
+  DataSource = spawn(fun() -> datasource:init(DataSink) end),
   
   Team = utils:getTeam(datasource:getNewData(DataSource)),
 
-  log(starter, Team,["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
+  log(DataSink, starter, Team,["IFAddr: ", IFAddr, " MCAddr: ", MCAddr, 
                       " Port: ", Port, " Station: ", Station,
                       " Offset: ", Offset]),
   
-  Clock = spawn(fun() -> clock:init(Offset,Team) end),
-  Broker = spawn(fun() -> slot_broker:init(Clock,Team) end),
+  Clock = spawn(fun() -> clock:init(Offset,Team,DataSink) end),
+  Broker = spawn(fun() -> slot_broker:init(Clock,Team,DataSink) end),
 
-  spawn(fun() -> receiver:init(Con,Team,DataSink,Broker,Clock) end),
-  spawn(fun() -> sender:init(Con,Station,DataSource,Broker,Clock,Team) end).
+  spawn(fun() -> receiver:init(Con,Team,DataSink,Broker,Clock,DataSink) end),
+  spawn(fun() -> sender:init(Con,Station,DataSource,Broker,Clock,Team,DataSink) end).
 
 
 parseConfig([InterfaceName, McastAddress, ReceivePort, StationType, UTCoffsetMs]) ->

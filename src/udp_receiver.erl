@@ -1,10 +1,10 @@
 -module(udp_receiver).
--export([init/3]).
+-export([init/4]).
 
--import(utils,[log/3]).
+-import(utils,[log/4]).
 
-init(PID, Con, TeamStr) ->
-  log(upd_receiver, TeamStr, ["UDP Receiver start"]),
+init(PID, Con, TeamStr,DS) ->
+  log(DS,upd_receiver, TeamStr, ["UDP Receiver start"]),
   {IFAddr, Port, MCA} = Con,
   Socket = werkzeug:openRec(MCA, IFAddr, Port),
   gen_udp:controlling_process(Socket, self()), 

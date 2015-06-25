@@ -1,19 +1,19 @@
 -module(datasource).
--export([init/0,getNewData/1]).
+-export([init/1,getNewData/1]).
 
 -import(io,[get_chars/2]).
--import(utils,[log/4]).
+-import(utils,[log/5]).
 
 
-init() -> loop().
+init(DSink) -> loop(DSink).
 
-loop() ->
+loop(DSink) ->
   receive 
     {Sender,currentData} ->
       Chars = get_chars('',24),
-      log(false,datasource, utils:getTeam(Chars), ["Read: ", utils:getTeam(Chars), " ..."]),
+      log(true,DSink,datasource, utils:getTeam(Chars), ["Read: ", utils:getTeam(Chars), " ..."]),
       Sender ! {payload,Chars},
-      loop()
+      loop(DSink)
   end.
 
 getNewData(Source) ->

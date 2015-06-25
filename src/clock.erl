@@ -1,29 +1,29 @@
 -module(clock).
--export([init/2,getMillis/1]).
--import(utils,[log/3]).
+-export([init/3,getMillis/1]).
+-import(utils,[log/4]).
 
-init(Offset,TeamStr) -> 
-  log(clock, TeamStr, ["Clock start"]),
-  loop(Offset,TeamStr).
+init(Offset,TeamStr,DS) -> 
+  log(DS,clock, TeamStr, ["Clock start"]),
+  loop(Offset,TeamStr,DS).
   
-loop(Offset,TeamStr) ->
+loop(Offset,TeamStr,DS) ->
   receive
   
     {Sender, getCurrentTimeMillis} ->
     	Millis = unixMillis() + Offset,
     	Sender ! {timeMillis, Millis},
-    	loop(Offset,TeamStr);
+    	loop(Offset,TeamStr,DS);
     	
   	{updateOffset, Delta} ->
   	  NewOffset = Offset + Delta,
       case Delta >= 5 of
-        true -> log(clock, TeamStr, ["Larger update: Delta, ",Delta,", NewOffset: ", NewOffset]);
+        true -> log(DS, clock, TeamStr, ["Larger update: Delta, ",Delta,", NewOffset: ", NewOffset]);
         false -> ok
       end,
-  	  loop(NewOffset,TeamStr);
+  	  loop(NewOffset,TeamStr,DS);
   
   	Any -> 
-      log(clock, TeamStr, ["Received unknown message: ", Any])
+      log(DS,clock, TeamStr, ["Received unknown message: ", Any])
     	
   end.
 
