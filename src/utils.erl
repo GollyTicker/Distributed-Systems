@@ -5,8 +5,6 @@
 
 -define(DEBUG, true).
 
--define(VERBOSE, false).
-
 % conditional logging
 log(false, _, _, _, _) -> nolog;
 log(true, DS,Module, Team, List) -> log(DS,Module, Team, List).
@@ -17,24 +15,21 @@ log(DS,M,T,L) -> case ?DEBUG of true -> DS ! {logging,M,T,L}; false -> ok end.
 % slow logging in DataSink
 logDataSink(Module, Team, List) ->
   case ?DEBUG of
-    true ->
-      F = fun(X) ->
-        case io_lib:printable_list(X) of
-          true -> X;
-          false -> to_String(X)
-        end
-      end,
-      ModTeamStr = to_String(Module) ++ "-" ++ Team,
-      Datei = logPath(Team),
-      Str = ModTeamStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
-      case ?VERBOSE of
-        true -> io:format(Str);
-        false -> ok
-      end,
-      logging(Datei,Str);
-    false -> nolog
-  end.
+        true ->
+          F = fun(X) ->
+            case io_lib:printable_list(X) of
+              true -> X;
+              false -> to_String(X)
+            end
+          end,
+          ModTeamStr = to_String(Module) ++ "-" ++ Team,
+          Datei = logPath(Team),
+          Inhalt = ModTeamStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
+          file:write_file(Datei,Inhalt,[append]);
+        false -> nolog
+      end.
 
+%
 logPath(Str) -> 
   "log/" ++ Str ++ ".log".
 
