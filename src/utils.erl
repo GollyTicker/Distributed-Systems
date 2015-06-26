@@ -25,7 +25,7 @@ logDataSink(Module, Team, List) ->
           ModTeamStr = to_String(Module) ++ "-" ++ Team,
           Datei = logPath(Team),
           Inhalt = ModTeamStr ++ ">> " ++ lists:flatmap(F,List) ++ "\n",
-          file:write_file(Datei,Inhalt,[append]);
+          file:write_file(Datei,Inhalt,[append,delayed_write]);
         false -> nolog
       end.
 
