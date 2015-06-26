@@ -20,7 +20,7 @@
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
 -define(FRAME_LENGTH, 1000).
--define(BEFORE_FRAME_END_OFFSET, 8).
+-define(BEFORE_FRAME_END_OFFSET, 15).
 -define(BEFORE_SLOTS_ENDS_OFFSET, 6).
 
 slotDuration() -> ?SLOT_DURATION.
@@ -49,11 +49,10 @@ safeSleep(Millis) ->
 waitToNextFrame2(BeforeF,Clock) ->
   M = clock:getMillis(Clock),
   CurrF = frameNoByMillis(M),
-  case (CurrF =:= BeforeF) of
+  case (CurrF == BeforeF) of
     true -> waitToNextFrame(Clock);
     false -> ok
   end.
-  
 
 waitToNextFrame(Clock) ->
   M = clock:getMillis(Clock),

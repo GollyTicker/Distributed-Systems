@@ -1,6 +1,7 @@
 -module(slot_broker).
 -export([init/3]).
 -import(utils,[log/4]).
+-import(werkzeug,[to_String/1]).
 
 
 slots() -> lists:seq(1,25).
@@ -27,6 +28,8 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, PrevCollSlots, Clock, Team,DS)
       {slots(),slots(),[]};
     false -> {PrevCSlots,PrevNSlots,PrevCollSlots}
   end,
+
+  TimeToSlotEnd = sync:slotDuration() - SlotTime,
 
   receive
     % Receiver service
@@ -60,7 +63,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, PrevCollSlots, Clock, Team,DS)
   % at the end of each slot.
   % Detect collision or valiate message to receiver.
   after 
-    max((sync:slotDuration() - SlotTime) - sync:beforeSlotEndsOffset(),0) -> 
+    TimeToSlotEnd -> 
       case Requests of 
         []  -> 
           loop([], CurrFrame, CSlots, NSlots, CollSlots, Clock,Team,DS);
@@ -72,7 +75,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, PrevCollSlots, Clock, Team,DS)
           loop([], CurrFrame, CSlots, NewNSlots, CollSlots, Clock,Team,DS);
 
         _ -> 
-          collisionLog(Team, Requests,DS),
+          collisionLog(Team, CurrSlot, Requests,DS),
           NewCollSlots = [CurrSlot|CollSlots],
           loop([], CurrFrame, CSlots, NSlots, NewCollSlots, Clock,Team,DS)
       end
@@ -85,10 +88,11 @@ getUnoccupiedSlot(Slots) ->
   lists:nth(N, Slots).
 
 
-collisionLog(Team, Requests,DS) ->
-  {_,{_,_,Slot,_},_} = hd(Requests),
-  Teams = lists:map(fun({_,{_,TeamBytes,_,_},_}) -> utils:getTeam(TeamBytes) end, Requests),
+collisionLog(Team, CurrSlot, Requests,DS) ->
+  TeamAndTSs = lists:map(fun({_,{_,TeamBytes,_,Ts},_}) -> {utils:getTeam(TeamBytes),Ts} end, Requests),
+  Teams = lists:map(fun({T,_}) -> T end,TeamAndTSs),
   AreWeMembers = lists:member(Team, Teams),
-  log(DS,slot_broker, Team, ["Collision in slot: ", Slot," Teams: [",string:join(Teams, ", "),"] Member? ", AreWeMembers]).
+  Str = lists:map(fun(T) -> to_String(T) end, TeamAndTSs),
+  log(DS,slot_broker, Team, ["Collision in slot: ", CurrSlot," Teams: [",string:join(Str, ", "),"] Member? ", AreWeMembers]).
 
 
