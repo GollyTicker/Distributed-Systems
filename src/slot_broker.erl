@@ -10,7 +10,8 @@ init(Clock,Team,DS) ->
   log(DS,slot_broker, Team, ["SlotBroker start"]),
   
   % the first loop iteration has to begin at the beginning of a frame.
-  sync:waitToNextFrame(Clock),
+  BeforeFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
+  sync:waitToNextFrame2(BeforeFrame,Clock),
   
   CurrFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
 

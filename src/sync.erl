@@ -11,8 +11,7 @@
   safeSleep/1,
   waitToNextFrame/1,
   waitToNextFrame2/2,
-  waitToEndOfFrame/1,
-  beforeSlotEndsOffset/0
+  waitToEndOfFrame/1
 ]).
 
 % Utilities for Synchronization
@@ -20,11 +19,9 @@
 -define(SLOT_DURATION, 40).
 -define(SLOT_HALVE, 20).
 -define(FRAME_LENGTH, 1000).
--define(BEFORE_FRAME_END_OFFSET, 15).
--define(BEFORE_SLOTS_ENDS_OFFSET, 6).
+-define(BEFORE_FRAME_END_OFFSET, 5).
 
 slotDuration() -> ?SLOT_DURATION.
-beforeSlotEndsOffset() -> ?BEFORE_SLOTS_ENDS_OFFSET.
 
 
 fstByMillis(M) -> {frameNoByMillis(M), slotNoByMillis(M), slotTimeByMillis(M)}.
