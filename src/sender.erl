@@ -33,10 +33,12 @@ frameLoop(CurrFrame, Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSen
         true ->
           sync:safeSleep(TimeToWait),
           ReserveNr = getNextFrameSlotNr(Broker),
-          sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data, Team,DS);
+          case ReserveNr of
+            undefined -> undefined;
+            _ -> sendMessage(Con, Clock, Broker, CurrNr, ReserveNr, Station, Data)
+          end;
 
         false -> 
-          % log(DS,sender, Team, ["TimeToWait is negative, SentNextNr = undefined."]),
           undefined
       end
   end,
@@ -49,10 +51,8 @@ frameLoop(CurrFrame, Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSen
   {NextNr2, NewFrameSent, NewFrameNotSent} =
     case (NothingSent or OurSlotCollided) of
       true  ->  Nr = getNextFrameSlotNr(Broker),
-                % log(DS,sender, Team, ["Failed Sending. Trying my luck with ", Nr, " next frame"]),
                 {Nr, FrameSent, FrameNotSent + 1};
-      false ->  % log(DS,sender, Team, ["Sending successful. Reserved ", SentNextNr]),
-                {SentNextNr, FrameSent + 1, FrameNotSent}
+      false ->  {SentNextNr, FrameSent + 1, FrameNotSent}
   end,
 
   log(DS,sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
@@ -65,14 +65,12 @@ frameLoop(CurrFrame, Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSen
 
 % CNr:       The slot nr we have to send the message in
 % ReserveNr: The slot nr to reserve in the next frame, if we succeed
-sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data, Team,DS) ->
+sendMessage(Con, Clock, Broker, CNr, ReserveNr, Station, Data) ->
   SlotNr = sync:slotNoByMillis(clock:getMillis(Clock)),
 
   IsCorrectSlot = CNr == SlotNr,
   IsFree = isFree(Broker, CNr),
-  
-  log(DS,sender,Team, ["IsCorrectSlot: ",IsCorrectSlot," IsFree: ",IsFree," ",CNr," -> ",ReserveNr]),
-  
+
   case (IsCorrectSlot and IsFree) of
     true -> 
       {Socket, _, Port, MCA} = Con,

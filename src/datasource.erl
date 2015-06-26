@@ -11,7 +11,6 @@ loop(DSink) ->
   receive 
     {Sender,currentData} ->
       Chars = get_chars('',24),
-      log(true,DSink,datasource, utils:getTeam(Chars), ["Read: ", utils:getTeam(Chars), " ..."]),
       Sender ! {payload,Chars},
       loop(DSink)
   end.

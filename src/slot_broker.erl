@@ -24,9 +24,7 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, PrevCollSlots, Clock, Team,DS)
   % Reset slot-variables on frame transition
   {CurrFrame,CurrSlot,SlotTime} = sync:fstByMillis(clock:getMillis(Clock)),
   {CSlots,NSlots,CollSlots} = case PrevFrame < CurrFrame of
-    true  ->
-      log(DS,slot_broker, Team, [" ===== ",CurrFrame," ===== "]),
-      {slots(),slots(),[]};
+    true  -> {slots(),slots(),[]};
     false -> {PrevCSlots,PrevNSlots,PrevCollSlots}
   end,
 
@@ -86,14 +84,15 @@ loop(Requests, PrevFrame, PrevCSlots, PrevNSlots, PrevCollSlots, Clock, Team,DS)
 
 getUnoccupiedSlot(Slots) ->
   N = utils:randomInt(length(Slots)),
-  lists:nth(N, Slots).
+  case Slots of
+    [] -> undefined;
+    _ -> lists:nth(N, Slots)
+  end.
 
 
 collisionLog(Team, CurrSlot, Requests,DS) ->
-  TeamAndTSs = lists:map(fun({_,{_,TeamBytes,_,Ts},_}) -> {utils:getTeam(TeamBytes),Ts} end, Requests),
-  Teams = lists:map(fun({T,_}) -> T end,TeamAndTSs),
+  Teams = lists:map(fun({_,{_,TeamBytes,_,_},_}) -> utils:getTeam(TeamBytes) end, Requests),
   AreWeMembers = lists:member(Team, Teams),
-  Str = lists:map(fun(T) -> to_String(T) end, TeamAndTSs),
-  log(DS,slot_broker, Team, ["Collision in slot: ", CurrSlot," Teams: [",string:join(Str, ", "),"] Member? ", AreWeMembers]).
+  log(DS,slot_broker, Team, ["Collision in slot: ", CurrSlot," Teams: [",string:join(Teams, ", "),"] Member? ", AreWeMembers]).
 
 
