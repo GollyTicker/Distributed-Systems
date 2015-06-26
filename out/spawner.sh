@@ -1,5 +1,5 @@
 
-./terminate.sh
+# ./terminate.sh
 
 # > ls
 # out/
@@ -11,14 +11,15 @@ cd ..
 ./build.sh
 cd out
 
-interfaceName=wlan0
+interfaceName=eth2
 mcastAddress=225.10.1.2
 receivePort=15010
-UTCoffsetMsA=0 #90
-UTCoffsetMsB=0 #40
+UTCoffsetMs=0
 
-./startStations.sh $interfaceName $mcastAddress $receivePort 1 5 A $UTCoffsetMsA
+./startStations.sh $interfaceName $mcastAddress $receivePort 1 1 A $UTCoffsetMs
 
-./startStations.sh $interfaceName $mcastAddress $receivePort 6 25 B $UTCoffsetMsB
+./startStations.sh $interfaceName $mcastAddress $receivePort 2 25 B $UTCoffsetMs
 
-./STDMAsniffer $mcastAddress $receivePort $interfaceName -adapt | tee log/sniffer.log - # slows down sniffer
+./STDMAsniffer $mcastAddress $receivePort $interfaceName -adapt | tee log/sniffer.log # slows down sniffer
+
+# ./startStations.sh eth2 225.10.1.2 15010 25 25 B 10
