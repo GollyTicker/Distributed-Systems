@@ -54,12 +54,12 @@ frameLoop(CurrFrame, Con, CurrNr, Station, Source, Broker, Clock, Team, FrameSen
                 {Nr, FrameSent, FrameNotSent + 1};
       false ->  {SentNextNr, FrameSent + 1, FrameNotSent}
   end,
-
-  log(DS,sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
   
   sync:waitToNextFrame2(CurrFrame,Clock), % loop invariant
   
   NewFrame = sync:frameNoByMillis(clock:getMillis(Clock)),
+
+  log(DS,sender, Team, ["Sent+NotSent=Total ",FrameSent, "+", FrameNotSent, "=", FrameSent+FrameNotSent]),
 
   frameLoop(NewFrame, Con, NextNr2, Station, Source, Broker, Clock, Team, NewFrameSent, NewFrameNotSent,DS).
 
